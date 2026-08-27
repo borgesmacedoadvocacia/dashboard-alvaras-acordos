@@ -20,10 +20,11 @@ O painel é acessado pela **Central de Dashboards**
 
 | Seção | Conteúdo |
 |---|---|
-| Resumo Executivo | Valor creditado, honorários do escritório com take rate, repasse a parceiros, valor devido ao cliente, ticket médio, diferença solicitado × creditado, repasses em aberto e prazo médio de repasse. Filtro por exercício (2024/2025/2026/todos) |
+| Resumo Executivo | Valor creditado, honorários do escritório com take rate, repasse a parceiros, valor devido ao cliente, ticket médio, diferença solicitado × creditado, repasses em aberto e prazo médio de repasse |
+| Seletor de período | Atalhos (ano corrente, mês corrente, últimos 12 meses, trimestres, semestres) mais chips de **ano** e de **mês**, ambos de seleção múltipla e combináveis |
 | Para Onde Vai o Dinheiro | Rateio do valor creditado entre escritório, parceiros e cliente, com a parcela ainda sem rateio informado; take rate por tipo de honorários (Êxito, Êxito + Sucumbencial, Sucumbencial) |
 | Evolução Mensal | Valor creditado e honorários mês a mês, com a linha de take rate no eixo secundário |
-| Comparativo Anual | Tabela ano a ano com alvarás, creditado, honorários, take rate, ticket médio e repasses — sempre sobre a base completa |
+| Comparativo Anual | Tabela ano a ano com alvarás, creditado, honorários, take rate, ticket médio e repasses. Ignora o recorte de anos, mas **respeita o de meses** — é assim que se compara o mesmo mês ou trimestre entre exercícios |
 | Pendências Financeiras e Prazos | Honorários a receber, valores a repassar ao cliente, prazo médio e receita fora do fluxo de honorários, com tabela filtrável |
 | Concentração de Clientes | Maiores clientes por valor creditado e distribuição por faixa de ticket |
 | Pontos de Atenção | Alertas automáticos de leitura executiva (ver abaixo) |
@@ -60,3 +61,20 @@ resultado do escritório:
 
 > A leitura **não** usa o endpoint `gviz`: nesta planilha ele trunca o resultado.
 > A Sheets API v4 devolve a base completa.
+
+## Seletor de período
+
+O período é sempre contado pela **data do crédito em conta** — o fato financeiro —,
+não pela aba em que a linha está lançada. Linhas sem data de crédito caem no ano da aba
+e ficam de fora de qualquer filtro por mês (o mês é desconhecido); quando isso acontece,
+o badge do período avisa quantas linhas ficaram fora do recorte.
+
+Anos e meses são **seleções múltiplas e independentes**, então dá para pedir:
+
+- um mês: `2026` + `Ago`
+- vários meses: `2026` + `Jan`, `Fev`, `Mar`
+- um ano: só `2026`
+- vários anos: `2025` + `2026`
+- o cruzamento dos dois: `Jan`, `Fev` de `2025` e `2026` — que é a comparação sazonal
+
+Meses sem nenhum lançamento no recorte de anos ativo aparecem esmaecidos.

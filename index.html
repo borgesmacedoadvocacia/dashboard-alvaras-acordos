@@ -376,7 +376,30 @@
     .modal { max-height: 92vh; }
     .modal-campos { grid-template-columns: 1fr; }
   }
-  .filtro-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-muted); font-weight: 700; }
+
+  .filtro-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+                  color: var(--texto-muted); font-weight: 700; white-space: nowrap; }
+  select.campo {
+    background: var(--bg3); border: 1px solid var(--borda); color: var(--texto);
+    border-radius: 8px; padding: 0.45rem 2rem 0.45rem 0.8rem;
+    font-size: 0.84rem; font-family: inherit; cursor: pointer; outline: none;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.6rem center;
+    transition: border-color .15s; min-width: 210px;
+  }
+  select.campo:hover, select.campo:focus { border-color: var(--azul-claro); }
+  select.campo option { background: var(--bg2); color: var(--texto); }
+  .badge-info {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--bg3); border: 1px solid var(--borda); border-radius: 8px;
+    padding: 0.4rem 0.75rem; font-size: 0.76rem; color: var(--texto-muted);
+  }
+  .badge-info strong { color: var(--azul-claro); }
+  .badge-info.alerta { border-color: var(--amarelo); color: var(--amarelo); }
+  .badge-info.alerta strong { color: var(--amarelo); }
+  .chip.sem-dados { opacity: 0.4; }
+  #chipsAnos, #chipsMeses { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
 </style>
 </head>
 <body>
@@ -436,7 +459,23 @@
   <section class="secao">
     <div class="secao-titulo">Resumo Executivo</div>
     <div class="secao-sub" id="subResumo">—</div>
-    <div class="filtros" id="filtrosAno"></div>
+
+    <div class="card" style="margin-bottom:1rem;padding:0.95rem 1.1rem">
+      <div class="filtros" style="margin-bottom:.7rem">
+        <span class="filtro-label">Atalho</span>
+        <select class="campo" id="selAtalho"></select>
+        <span class="badge-info" id="badgePeriodo">—</span>
+      </div>
+      <div class="filtros" style="margin-bottom:.55rem">
+        <span class="filtro-label">Ano</span>
+        <span id="chipsAnos"></span>
+      </div>
+      <div class="filtros" style="margin-bottom:0">
+        <span class="filtro-label">Mês</span>
+        <span id="chipsMeses"></span>
+      </div>
+    </div>
+
     <div class="kpis" id="kpis"></div>
   </section>
 
@@ -466,7 +505,7 @@
 
   <section class="secao">
     <div class="secao-titulo">Comparativo Anual</div>
-    <div class="secao-sub">Base histórica completa, independente do filtro de ano acima.</div>
+    <div class="secao-sub" id="subAnos">—</div>
     <div class="card">
       <div class="tabela-wrap">
         <table id="tabelaAnos">
@@ -866,9 +905,13 @@ const ANOS = [
   { ano: 2026, aba: '2026' }
 ];
 
-let ANO_SEL = 'todos';
 let REGISTROS = [];
 const FILTRO_PEND = { f: 'pendentes', termo: '' };
+
+/* Período: conjuntos vazios = "tudo". Combinando os dois é possível pedir
+   um mês, vários meses, um ano, vários anos ou o cruzamento dos dois
+   (ex.: janeiro e fevereiro de 2025 e 2026). */
+const PERIODO = { anos: new Set(), meses: new Set() };
 
 async function buscarTudo() {
   const faixas = ANOS.map(a => "'" + a.aba + "'!A1:X1000");
@@ -912,8 +955,83 @@ function quitado(v) {
   return t.startsWith('pago') || t.startsWith('dispensad') || t === 'não há' || t === 'nao ha';
 }
 
-function filtrados() {
-  return ANO_SEL === 'todos' ? REGISTROS : REGISTROS.filter(r => r.ano === Number(ANO_SEL));
+/* O período é lido pela DATA DO CRÉDITO (o fato financeiro). Quando a linha
+   não tem data lançada, cai no ano da aba — e nesse caso fica de fora de
+   qualquer filtro por mês, porque o mês é desconhecido. */
+function anoDe(r) { return r.dataCred ? r.dataCred.getFullYear() : r.ano; }
+function mesDe(r) { return r.dataCred ? r.dataCred.getMonth() : null; }
+
+function noPeriodo(r) {
+  if (PERIODO.anos.size && !PERIODO.anos.has(anoDe(r))) return false;
+  if (PERIODO.meses.size) {
+    const m = mesDe(r);
+    if (m === null || !PERIODO.meses.has(m)) return false;
+  }
+  return true;
+}
+function filtrados() { return REGISTROS.filter(noPeriodo); }
+
+/** Quantos ficaram de fora só por não terem data de crédito lançada. */
+function semDataNoAno() {
+  if (!PERIODO.meses.size) return 0;
+  return REGISTROS.filter(r => !r.dataCred &&
+    (!PERIODO.anos.size || PERIODO.anos.has(anoDe(r)))).length;
+}
+
+const ATALHOS = [
+  { id: 'tudo', nome: 'Todo o histórico' },
+  { id: 'ano-atual', nome: 'Ano corrente' },
+  { id: 'ano-anterior', nome: 'Ano anterior' },
+  { id: 'mes-atual', nome: 'Mês corrente' },
+  { id: 'ult12', nome: 'Últimos 12 meses' },
+  { id: 't1', nome: '1º trimestre (Jan–Mar)', meses: [0, 1, 2] },
+  { id: 't2', nome: '2º trimestre (Abr–Jun)', meses: [3, 4, 5] },
+  { id: 't3', nome: '3º trimestre (Jul–Set)', meses: [6, 7, 8] },
+  { id: 't4', nome: '4º trimestre (Out–Dez)', meses: [9, 10, 11] },
+  { id: 's1', nome: '1º semestre (Jan–Jun)', meses: [0, 1, 2, 3, 4, 5] },
+  { id: 's2', nome: '2º semestre (Jul–Dez)', meses: [6, 7, 8, 9, 10, 11] }
+];
+
+function aplicarAtalho(id) {
+  const hoje = new Date();
+  const anos = anosDisponiveis();
+  PERIODO.anos.clear();
+  PERIODO.meses.clear();
+  if (id === 'tudo') { /* tudo limpo */ }
+  else if (id === 'ano-atual') { PERIODO.anos.add(hoje.getFullYear()); }
+  else if (id === 'ano-anterior') { PERIODO.anos.add(hoje.getFullYear() - 1); }
+  else if (id === 'mes-atual') { PERIODO.anos.add(hoje.getFullYear()); PERIODO.meses.add(hoje.getMonth()); }
+  else if (id === 'ult12') {
+    // 12 meses corridos: mantém os dois anos envolvidos e recorta pelos meses
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+    anos.filter(a => a >= ini.getFullYear() && a <= hoje.getFullYear()).forEach(a => PERIODO.anos.add(a));
+  } else {
+    const at = ATALHOS.find(x => x.id === id);
+    if (at && at.meses) {
+      at.meses.forEach(m => PERIODO.meses.add(m));
+      const ultimo = anos[anos.length - 1];
+      if (ultimo) PERIODO.anos.add(ultimo);
+    }
+  }
+  renderControles();
+  desenhar();
+}
+
+function anosDisponiveis() {
+  return [...new Set(REGISTROS.map(anoDe))].sort((a, b) => a - b);
+}
+
+/** Texto legível do que está selecionado. */
+function rotuloPeriodo() {
+  const anos = [...PERIODO.anos].sort((a, b) => a - b);
+  const meses = [...PERIODO.meses].sort((a, b) => a - b);
+  const txtAnos = anos.length ? (anos.length === 1 ? String(anos[0]) : anos.join(', ')) : 'todos os anos';
+  if (!meses.length) return txtAnos;
+  const seq = meses.length > 1 && meses[meses.length - 1] - meses[0] === meses.length - 1;
+  const txtMeses = meses.length === 12 ? 'todos os meses'
+    : seq ? MESES_CURTO[meses[0]] + '–' + MESES_CURTO[meses[meses.length - 1]]
+    : meses.map(m => MESES_CURTO[m]).join(', ');
+  return txtMeses + ' de ' + txtAnos;
 }
 
 function agregar(regs) {
@@ -962,22 +1080,74 @@ function agregar(regs) {
 }
 function media(v) { return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; }
 
-function renderFiltroAno() {
-  const el = document.getElementById('filtrosAno');
-  const anos = [...new Set(REGISTROS.map(r => r.ano))].sort();
-  el.innerHTML = '<span class="filtro-label" style="margin-right:.3rem">Exercício</span>' +
-    '<button type="button" class="chip' + (ANO_SEL === 'todos' ? ' ativo' : '') + '" data-ano="todos">Todos</button>' +
-    anos.map(a => '<button type="button" class="chip' + (String(ANO_SEL) === String(a) ? ' ativo' : '') +
+let controlesLigados = false;
+
+function renderControles() {
+  const anos = anosDisponiveis();
+
+  // --- atalhos ---
+  const sel = document.getElementById('selAtalho');
+  if (!sel.options.length) {
+    sel.innerHTML = ATALHOS.map(a => '<option value="' + a.id + '">' + a.nome + '</option>').join('');
+  }
+
+  // --- chips de ano ---
+  document.getElementById('chipsAnos').innerHTML =
+    '<button type="button" class="chip' + (PERIODO.anos.size ? '' : ' ativo') + '" data-ano="todos">Todos</button>' +
+    anos.map(a => '<button type="button" class="chip' + (PERIODO.anos.has(a) ? ' ativo' : '') +
       '" data-ano="' + a + '">' + a + '</button>').join('');
-  el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
-    ANO_SEL = b.dataset.ano; render(REGISTROS);
-  }));
+
+  // --- chips de mês (desabilita o que não existe no recorte de anos) ---
+  const mesesComDados = new Set(REGISTROS
+    .filter(r => r.dataCred && (!PERIODO.anos.size || PERIODO.anos.has(anoDe(r))))
+    .map(r => r.dataCred.getMonth()));
+  document.getElementById('chipsMeses').innerHTML =
+    '<button type="button" class="chip' + (PERIODO.meses.size ? '' : ' ativo') + '" data-mes="todos">Todos</button>' +
+    MESES_CURTO.map((m, i) => '<button type="button" class="chip' +
+      (PERIODO.meses.has(i) ? ' ativo' : '') + (mesesComDados.has(i) ? '' : ' sem-dados') +
+      '" data-mes="' + i + '" title="' + MESES[i] + '">' + m + '</button>').join('');
+
+  // --- badge ---
+  const f = filtrados();
+  const orfaos = semDataNoAno();
+  const badge = document.getElementById('badgePeriodo');
+  badge.className = 'badge-info' + (orfaos ? ' alerta' : '');
+  badge.innerHTML = '<strong>' + f.length + '</strong> alvará' + (f.length === 1 ? '' : 's') +
+    ' · ' + rotuloPeriodo() +
+    (orfaos ? ' · ' + orfaos + ' sem data de crédito fora do recorte' : '');
+
+  if (controlesLigados) return;
+  controlesLigados = true;
+
+  sel.addEventListener('change', () => aplicarAtalho(sel.value));
+
+  document.getElementById('chipsAnos').addEventListener('click', ev => {
+    const b = ev.target.closest('.chip');
+    if (!b) return;
+    if (b.dataset.ano === 'todos') PERIODO.anos.clear();
+    else {
+      const a = Number(b.dataset.ano);
+      PERIODO.anos.has(a) ? PERIODO.anos.delete(a) : PERIODO.anos.add(a);
+    }
+    renderControles(); desenhar();
+  });
+
+  document.getElementById('chipsMeses').addEventListener('click', ev => {
+    const b = ev.target.closest('.chip');
+    if (!b) return;
+    if (b.dataset.mes === 'todos') PERIODO.meses.clear();
+    else {
+      const m = Number(b.dataset.mes);
+      PERIODO.meses.has(m) ? PERIODO.meses.delete(m) : PERIODO.meses.add(m);
+    }
+    renderControles(); desenhar();
+  });
 }
 
 function renderKPIs(regs, a) {
-  const rot = ANO_SEL === 'todos' ? 'toda a base histórica' : 'exercício de ' + ANO_SEL;
+  const rot = (!PERIODO.anos.size && !PERIODO.meses.size) ? 'toda a base histórica' : rotuloPeriodo();
   document.getElementById('subResumo').textContent =
-    'Alvarás e acordos creditados em conta — ' + rot + '.';
+    'Alvarás e acordos creditados em conta — ' + rot + '. O período é contado pela data do crédito.';
 
   const corTake = a.takeRate === null ? 'azul' : a.takeRate >= 25 ? 'verde' : a.takeRate >= 15 ? 'amarelo' : 'vermelho';
   const pendTotal = a.pendBMValor + a.pendClienteValor;
@@ -1123,12 +1293,19 @@ function renderEvolucao(regs) {
 
 function renderComparativoAnos() {
   const corpo = document.getElementById('corpoAnos');
-  const anos = [...new Set(REGISTROS.map(r => r.ano))].sort();
-  const linhas = anos.map(ano => {
-    const a = agregar(REGISTROS.filter(r => r.ano === ano));
-    return { ano, a };
-  });
-  const tot = agregar(REGISTROS);
+  // Ignora o recorte de ANOS (para comparar todos), mas respeita o de MESES —
+  // assim dá para comparar o mesmo mês ou trimestre ano a ano.
+  const base = PERIODO.meses.size
+    ? REGISTROS.filter(r => { const m = mesDe(r); return m !== null && PERIODO.meses.has(m); })
+    : REGISTROS;
+  const anos = [...new Set(base.map(anoDe))].sort((x, y) => x - y);
+  const linhas = anos.map(ano => ({ ano, a: agregar(base.filter(r => anoDe(r) === ano)) }));
+  const tot = agregar(base);
+
+  document.getElementById('subAnos').textContent = PERIODO.meses.size
+    ? 'Comparando apenas ' + [...PERIODO.meses].sort((x, y) => x - y).map(m => MESES[m]).join(', ') +
+      ' de cada ano — o filtro de anos não se aplica aqui.'
+    : 'Base histórica completa, independente do filtro de período acima.';
   corpo.innerHTML = linhas.map(({ ano, a }) => {
     const cor = a.takeRate === null ? 'neutro' : a.takeRate >= 25 ? 'verde' : a.takeRate >= 15 ? 'amarelo' : 'vermelho';
     return '<tr>' +
@@ -1405,10 +1582,7 @@ function montarBusca() {
   ligarBusca('inputBusca', v => { FILTRO_PEND.termo = v; renderTabelaPend(filtrados()); });
 }
 
-function render(regs) {
-  REGISTROS = regs;
-  montarBusca();
-  renderFiltroAno();
+function desenhar() {
   const f = filtrados();
   const a = agregar(f);
   renderKPIs(f, a);
@@ -1419,6 +1593,13 @@ function render(regs) {
   renderPendencias(f, a);
   renderClientes(f);
   renderAtencao(f, a);
+}
+
+function render(regs) {
+  REGISTROS = regs;
+  montarBusca();
+  renderControles();
+  desenhar();
 }
 
 document.getElementById('filtrosPend').addEventListener('click', ev => {
