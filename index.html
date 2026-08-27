@@ -273,6 +273,109 @@
     .grafico-box.alto { height: 300px; }
     .grafico-box.medio { height: 260px; }
   }
+
+  /* ===== BUSCA ===== */
+  .busca-wrap { position: relative; flex: 1 1 260px; min-width: 220px; max-width: 420px; }
+  .busca {
+    width: 100%; background: var(--bg3); border: 1px solid var(--borda); color: var(--texto);
+    border-radius: 9px; padding: 0.5rem 2rem 0.5rem 2rem; font-size: 0.85rem;
+    font-family: inherit; outline: none; transition: border-color .15s;
+  }
+  .busca:focus { border-color: var(--azul-claro); }
+  .busca::placeholder { color: #47536b; }
+  .busca-icone {
+    position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%);
+    color: var(--texto-muted); font-size: 0.85rem; pointer-events: none;
+  }
+  .busca-limpar {
+    position: absolute; right: 0.45rem; top: 50%; transform: translateY(-50%);
+    background: transparent; border: none; color: var(--texto-muted);
+    font-size: 1rem; cursor: pointer; padding: 0 .2rem; line-height: 1; font-family: inherit;
+  }
+  .busca-limpar:hover { color: var(--vermelho); }
+
+  /* ===== LINHAS CLICÁVEIS ===== */
+  tbody tr.clicavel { cursor: pointer; transition: background .12s; }
+  tbody tr.clicavel:hover { background: rgba(59,130,246,0.10); }
+  tbody tr.clicavel:hover td:first-child { box-shadow: inset 3px 0 0 var(--azul-claro); }
+  .dica-clique {
+    font-size: 0.72rem; color: var(--texto-muted); margin-left: auto;
+    display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap;
+  }
+
+  /* ===== MODAL DE DETALHE ===== */
+  .modal-fundo {
+    position: fixed; inset: 0; z-index: 900;
+    background: rgba(5,8,15,0.72); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+    opacity: 0; transition: opacity .16s;
+  }
+  .modal-fundo.aberto { opacity: 1; }
+  .modal {
+    width: 100%; max-width: 660px; max-height: 88vh; overflow-y: auto;
+    background: var(--bg2); border: 1px solid var(--borda); border-radius: 14px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+    transform: translateY(8px); transition: transform .16s;
+  }
+  .modal-fundo.aberto .modal { transform: translateY(0); }
+  .modal::-webkit-scrollbar { width: 9px; }
+  .modal::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 5px; }
+  .modal-topo {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 1.15rem 1.35rem 0.9rem; border-bottom: 1px solid var(--borda);
+    position: sticky; top: 0; background: var(--bg2); z-index: 2;
+    border-radius: 14px 14px 0 0;
+  }
+  .modal-titulo { font-size: 1.02rem; font-weight: 800; line-height: 1.3; letter-spacing: -0.01em; }
+  .modal-sub { font-size: 0.78rem; color: var(--texto-muted); margin-top: 0.2rem; line-height: 1.45; }
+  .modal-fechar {
+    margin-left: auto; flex-shrink: 0; background: transparent;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    color: var(--texto-muted); font-size: 1.05rem; line-height: 1;
+    padding: 0.32rem 0.55rem; cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .modal-fechar:hover { color: var(--vermelho); border-color: var(--vermelho); }
+  .modal-corpo { padding: 1.1rem 1.35rem 1.35rem; }
+  .modal-bloco { margin-bottom: 1.15rem; }
+  .modal-bloco:last-child { margin-bottom: 0; }
+  .modal-bloco-titulo {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--texto-muted); font-weight: 700; margin-bottom: 0.5rem;
+    padding-bottom: 0.3rem; border-bottom: 1px solid var(--borda);
+  }
+  .modal-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.7rem 1.1rem; }
+  .modal-campo { min-width: 0; }
+  .modal-campo.largo { grid-column: 1 / -1; }
+  .modal-rotulo {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--texto-muted); font-weight: 700; margin-bottom: 0.15rem;
+  }
+  .modal-valor { font-size: 0.9rem; font-weight: 600; word-break: break-word; line-height: 1.45; }
+  .modal-valor.grande { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+  .modal-valor.muted { color: var(--texto-muted); font-weight: 500; }
+  .modal-valor.texto { font-weight: 500; white-space: pre-wrap; font-size: 0.85rem; }
+  .modal-nota {
+    margin-top: 0.9rem; padding: 0.7rem 0.85rem; border-radius: 9px;
+    background: var(--bg3); border-left: 3px solid var(--azul-claro);
+    font-size: 0.8rem; color: var(--texto-muted); line-height: 1.55;
+  }
+  .modal-nota.alerta { border-left-color: var(--amarelo); background: rgba(245,158,11,0.07); }
+  .modal-nota.critico { border-left-color: var(--vermelho); background: rgba(239,68,68,0.07); }
+  .modal-nota b { color: var(--texto); }
+  .modal-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; }
+  .modal-acao {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.45rem 0.8rem; border-radius: 8px; text-decoration: none;
+    background: var(--bg3); border: 1px solid var(--borda);
+    color: var(--texto); font-size: 0.8rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all .15s;
+  }
+  .modal-acao:hover { border-color: var(--azul-claro); color: #fff; }
+
+  @media (max-width: 720px) {
+    .modal { max-height: 92vh; }
+    .modal-campos { grid-template-columns: 1fr; }
+  }
   .filtro-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-muted); font-weight: 700; }
 </style>
 </head>
@@ -385,11 +488,13 @@
     <div class="resumo-grid" id="resumoPendencias"></div>
     <div class="card">
       <div class="filtros" id="filtrosPend">
+        <span id="buscaCampo"></span>
         <button type="button" class="chip ativo" data-f="pendentes">Com pendência</button>
         <button type="button" class="chip" data-f="bm">Repasse ao BM em aberto</button>
         <button type="button" class="chip" data-f="cliente">Repasse ao cliente em aberto</button>
         <button type="button" class="chip" data-f="fluxo">Não lançado no fluxo</button>
         <button type="button" class="chip" data-f="todos">Todos</button>
+        <span class="dica-clique">&#128065; clique em uma linha para abrir a ficha do alvará</span>
       </div>
       <div class="tabela-wrap">
         <table id="tabelaPend">
@@ -624,6 +729,133 @@ function topN(mapa, n, rotuloOutros) {
 }
 
 /* =========================================================================
+   DETALHE EM JANELA (MODAL)
+   Uso: abrirDetalhe({ titulo, sub, blocos:[{titulo, campos:[{r,v,largo,classe}]}],
+                       notas:[{tipo,html}], acoes:[{rotulo,href}] })
+   Linhas de tabela viram clicáveis com `tabelaClicavel(tbodyId, lista, montador)`.
+   ========================================================================= */
+(function () {
+  const fundo = document.createElement('div');
+  fundo.className = 'modal-fundo oculto';
+  fundo.id = 'modalFundo';
+  fundo.innerHTML =
+    '<div class="modal" role="dialog" aria-modal="true">' +
+      '<div class="modal-topo">' +
+        '<div><div class="modal-titulo" id="modalTitulo"></div>' +
+        '<div class="modal-sub" id="modalSub"></div></div>' +
+        '<button class="modal-fechar" id="modalFechar" title="Fechar (Esc)">&#10005;</button>' +
+      '</div>' +
+      '<div class="modal-corpo" id="modalCorpo"></div>' +
+    '</div>';
+  document.body.appendChild(fundo);
+
+  fundo.addEventListener('click', ev => { if (ev.target === fundo) fecharDetalhe(); });
+  document.getElementById('modalFechar').addEventListener('click', fecharDetalhe);
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && !fundo.classList.contains('oculto')) fecharDetalhe();
+  });
+})();
+
+function fecharDetalhe() {
+  const f = document.getElementById('modalFundo');
+  f.classList.remove('aberto');
+  setTimeout(() => f.classList.add('oculto'), 160);
+}
+
+function abrirDetalhe(cfg) {
+  const f = document.getElementById('modalFundo');
+  document.getElementById('modalTitulo').innerHTML = cfg.titulo || '';
+  document.getElementById('modalSub').innerHTML = cfg.sub || '';
+
+  let html = '';
+  (cfg.blocos || []).forEach(bl => {
+    const campos = (bl.campos || []).filter(c => c && c.v !== undefined && c.v !== null && c.v !== '');
+    if (!campos.length) return;
+    html += '<div class="modal-bloco">' +
+      (bl.titulo ? '<div class="modal-bloco-titulo">' + bl.titulo + '</div>' : '') +
+      '<div class="modal-campos">' +
+      campos.map(c =>
+        '<div class="modal-campo' + (c.largo ? ' largo' : '') + '">' +
+        '<div class="modal-rotulo">' + c.r + '</div>' +
+        '<div class="modal-valor ' + (c.classe || '') + '">' + c.v + '</div></div>'
+      ).join('') + '</div></div>';
+  });
+  (cfg.notas || []).forEach(n => {
+    if (!n || !n.html) return;
+    html += '<div class="modal-nota ' + (n.tipo || '') + '">' + n.html + '</div>';
+  });
+  if (cfg.acoes && cfg.acoes.length) {
+    html += '<div class="modal-acoes">' + cfg.acoes.filter(Boolean).map(a =>
+      '<a class="modal-acao" href="' + a.href + '" target="_blank" rel="noopener">' + a.rotulo + '</a>'
+    ).join('') + '</div>';
+  }
+  document.getElementById('modalCorpo').innerHTML = html ||
+    '<div style="color:var(--texto-muted);font-size:.85rem">Sem dados detalhados para este registro.</div>';
+
+  f.classList.remove('oculto');
+  requestAnimationFrame(() => f.classList.add('aberto'));
+}
+
+/** Marca as linhas de um tbody como clicáveis e liga cada uma ao seu registro. */
+function tabelaClicavel(tbodyId, lista, montador) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+    if (i >= lista.length || !lista[i]) return;
+    tr.classList.add('clicavel');
+    tr.title = 'Clique para ver os detalhes';
+    tr.addEventListener('click', () => abrirDetalhe(montador(lista[i])));
+  });
+}
+
+/** Rótulo padrão avisando que a tabela é clicável. */
+function dicaClique(texto) {
+  return '<span class="dica-clique">&#128065; ' + (texto || 'clique em uma linha para ver os detalhes') + '</span>';
+}
+
+/* =========================================================================
+   BUSCA
+   ========================================================================= */
+/** Normaliza para busca: sem acento, minúsculo, só dígitos preservados. */
+function chaveBusca(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+/** Termo casa se todas as palavras aparecerem no texto; dígitos comparam só dígitos. */
+function casaBusca(termo, ...campos) {
+  const t = chaveBusca(termo);
+  if (!t) return true;
+  const texto = campos.map(c => chaveBusca(c)).join(' ');
+  const soDig = texto.replace(/\D/g, '');
+  return t.split(/\s+/).every(p => {
+    if (/^\d{3,}$/.test(p)) return soDig.includes(p) || texto.includes(p);
+    return texto.includes(p);
+  });
+}
+/** Monta o HTML de um campo de busca. */
+function campoBusca(id, placeholder) {
+  return '<div class="busca-wrap">' +
+    '<span class="busca-icone">&#128269;</span>' +
+    '<input type="search" class="busca" id="' + id + '" placeholder="' + placeholder + '" autocomplete="off" />' +
+    '<button type="button" class="busca-limpar oculto" id="' + id + 'Limpar" title="Limpar">&#10005;</button></div>';
+}
+/** Liga o campo de busca a um callback, com debounce curto. */
+function ligarBusca(id, aoDigitar) {
+  const el = document.getElementById(id);
+  const limpar = document.getElementById(id + 'Limpar');
+  if (!el) return;
+  let t = null;
+  const disparar = () => {
+    limpar.classList.toggle('oculto', !el.value);
+    clearTimeout(t);
+    t = setTimeout(() => aoDigitar(el.value), 120);
+  };
+  el.addEventListener('input', disparar);
+  limpar.addEventListener('click', () => { el.value = ''; el.focus(); disparar(); });
+}
+
+
+/* =========================================================================
    APLICAÇÃO
    ========================================================================= */
 /* Abas por ano. O layout de 2024 tem menos colunas que 2025/2026, por isso
@@ -636,7 +868,7 @@ const ANOS = [
 
 let ANO_SEL = 'todos';
 let REGISTROS = [];
-const FILTRO_PEND = { f: 'pendentes' };
+const FILTRO_PEND = { f: 'pendentes', termo: '' };
 
 async function buscarTudo() {
   const faixas = ANOS.map(a => "'" + a.aba + "'!A1:X1000");
@@ -662,6 +894,7 @@ async function buscarTudo() {
         mesRotulo: campo(l, cab, 'Mês do Crédito', 'I'),
         tipoHon: campo(l, cab, 'Tipo de Honorários', 'J') || 'Não informado',
         repasseBM: campo(l, cab, 'Repasse ao BM', 'L'),
+        repasseTatiana: campo(l, cab, 'Repasse Tatiana Realizado'),
         dataRepasseBM: parseDataBR(campo(l, cab, 'Data Repasse ao BM', 'M')),
         repasseCliente: campo(l, cab, 'Repasse ao Cliente'),
         dataRepasseCliente: parseDataBR(campo(l, cab, 'Data do Repasse ao Cliente')),
@@ -927,6 +1160,75 @@ function renderPendencias(regs, a) {
   renderTabelaPend(regs);
 }
 
+/** Ficha completa de um alvará/acordo. */
+function fichaAlvara(r) {
+  const bmAberto = !quitado(r.repasseBM) && r.honorarios > 0;
+  const cliAberto = !quitado(r.repasseCliente) && r.devidoCliente > 0;
+  const foraFluxo = r.ano >= 2025 && r.lancadoFluxo && !/^sim|^não há|^nao ha/i.test(r.lancadoFluxo);
+  const semRateio = r.creditado > 0 && (r.honorarios + r.parceiros + r.devidoCliente) === 0;
+  const take = r.creditado > 0 ? r.honorarios / r.creditado * 100 : null;
+  const dif = r.solicitado > 0 && r.creditado > 0 ? r.creditado - r.solicitado : null;
+  const prazoCli = r.dataCred && r.dataRepasseCliente ? diasEntre(r.dataCred, r.dataRepasseCliente) : null;
+  const prazoBM = r.dataCred && r.dataRepasseBM ? diasEntre(r.dataCred, r.dataRepasseBM) : null;
+  const d = x => x ? x.toLocaleDateString('pt-BR') : '—';
+
+  return {
+    titulo: esc(r.cliente || 'Sem cliente'),
+    sub: esc(r.processo || 'sem número de processo') + ' · exercício ' + r.ano,
+    blocos: [
+      { titulo: 'Valores', campos: [
+        { r: 'Valor creditado', v: moeda(r.creditado), classe: 'grande' },
+        { r: 'Valor solicitado', v: r.solicitado ? moeda(r.solicitado) : '—' },
+        dif !== null ? { r: 'Diferença', v: (dif >= 0 ? '<span class="val-pos">+' : '<span class="val-neg">') +
+            moeda(Math.abs(dif)) + '</span> ' +
+            (dif >= 0 ? '(juros e correção)' : '(creditado a menor)') } : null,
+        { r: 'Honorários do escritório', v: moeda(r.honorarios) +
+            (take !== null ? ' <span class="tag-pct ' + (take >= 25 ? 'verde' : take >= 15 ? 'amarelo' : 'vermelho') + '">' + pct1(take) + '</span>' : '') },
+        { r: 'Repasse a parceiros', v: moeda(r.parceiros) },
+        { r: 'Devido ao cliente', v: moeda(r.devidoCliente) }
+      ]},
+      { titulo: 'Contrato e enquadramento', campos: [
+        { r: 'Tipo de honorários', v: esc(r.tipoHon) },
+        { r: 'Situação do alvará', v: 'Depositado em conta' },
+        { r: 'CPF/CNPJ', v: esc(r.doc || '—') },
+        r.observacoes ? { r: 'Observações do contrato', v: esc(r.observacoes), largo: true, classe: 'texto' } : null
+      ]},
+      { titulo: 'Datas e repasses', campos: [
+        { r: 'Crédito em conta', v: d(r.dataCred) },
+        { r: 'Mês do crédito', v: esc(r.mesRotulo || '—') },
+        { r: 'Repasse ao escritório', v: (r.repasseBM
+            ? '<span class="tag-pct ' + (quitado(r.repasseBM) ? 'verde' : 'vermelho') + '">' + esc(r.repasseBM) + '</span>'
+            : '<span class="tag-pct neutro">—</span>') + ' ' + d(r.dataRepasseBM) +
+            (prazoBM !== null ? ' <span style="color:var(--texto-muted)">(' + prazoBM + ' d)</span>' : '') },
+        { r: 'Repasse ao cliente', v: (r.repasseCliente
+            ? '<span class="tag-pct ' + (quitado(r.repasseCliente) ? 'verde' : 'vermelho') + '">' + esc(r.repasseCliente) + '</span>'
+            : '<span class="tag-pct neutro">—</span>') + ' ' + d(r.dataRepasseCliente) +
+            (prazoCli !== null ? ' <span style="color:var(--texto-muted)">(' + prazoCli + ' d)</span>' : '') },
+        { r: 'Repasse Tatiana', v: esc(r.repasseTatiana || '—') },
+        { r: 'Lançado no fluxo de honorários', v: r.lancadoFluxo
+            ? '<span class="tag-pct ' + (foraFluxo ? 'amarelo' : 'verde') + '">' + esc(r.lancadoFluxo) + '</span>'
+            : '<span class="tag-pct neutro">não informado</span>' }
+      ]}
+    ],
+    notas: [
+      semRateio ? { tipo: 'critico', html: 'Este alvará tem <b>' + moeda(r.creditado) +
+        '</b> creditado mas <b>nenhum destino preenchido</b> (honorários, parceiro ou cliente). Enquanto ficar assim, ele puxa o take rate do período para baixo sem representar a realidade.' } : null,
+      bmAberto ? { tipo: 'critico', html: '<b>' + moeda(r.honorarios) +
+        '</b> de honorários já reconhecidos e ainda sem repasse ao escritório registrado como pago.' } : null,
+      cliAberto ? { tipo: 'alerta', html: '<b>' + moeda(r.devidoCliente) +
+        '</b> devidos ao cliente ainda sem repasse registrado. Valor de terceiro retido além do razoável é risco ético, não só reputacional.' } : null,
+      prazoCli !== null && prazoCli > 10 ? { tipo: 'alerta', html: 'O repasse ao cliente levou <b>' + prazoCli +
+        ' dias</b> após o crédito em conta — acima da referência de 5 dias úteis.' } : null,
+      foraFluxo ? { tipo: 'alerta', html: 'Marcado como <b>não lançado no fluxo de honorários</b>: a receita deste alvará não está no resultado financeiro do escritório.' } : null,
+      !bmAberto && !cliAberto && !semRateio ? { tipo: '', html: 'Alvará <b>totalmente liquidado</b>: honorários e repasse ao cliente quitados.' } : null
+    ].filter(Boolean),
+    acoes: r.processo ? [{
+      rotulo: '&#128269; Consultar processo no Google',
+      href: 'https://www.google.com/search?q=' + encodeURIComponent('"' + r.processo + '"')
+    }] : []
+  };
+}
+
 function renderTabelaPend(regs) {
   const f = FILTRO_PEND.f;
   const passa = r => {
@@ -939,7 +1241,9 @@ function renderTabelaPend(regs) {
     if (f === 'fluxo') return flx;
     return bm || cli || flx;
   };
-  const vis = regs.filter(passa).sort((x, y) => (y.creditado || 0) - (x.creditado || 0));
+  const vis = regs.filter(passa)
+    .filter(r => casaBusca(FILTRO_PEND.termo, r.cliente, r.processo, r.doc, r.observacoes))
+    .sort((x, y) => (y.creditado || 0) - (x.creditado || 0));
   const corpo = document.getElementById('corpoPend');
   corpo.innerHTML = vis.length ? vis.map(r => {
     const tags = [];
@@ -955,6 +1259,7 @@ function renderTabelaPend(regs) {
       '<td>' + moeda(r.devidoCliente) + '</td>' +
       '<td>' + tags.join(' ') + '</td></tr>';
   }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--texto-muted);padding:1.2rem">Nenhum registro neste filtro.</td></tr>';
+  if (vis.length) tabelaClicavel('corpoPend', vis, fichaAlvara);
   document.getElementById('notaPend').textContent =
     'Exibindo ' + vis.length + ' de ' + regs.length + ' alvarás do período filtrado.';
 }
@@ -1091,8 +1396,18 @@ function renderAtencao(regs, a) {
   document.getElementById('listaAtencao').innerHTML = itens.join('');
 }
 
+let buscaMontada = false;
+function montarBusca() {
+  if (buscaMontada) return;
+  buscaMontada = true;
+  document.getElementById('buscaCampo').innerHTML =
+    campoBusca('inputBusca', 'Cliente, processo ou CPF/CNPJ…');
+  ligarBusca('inputBusca', v => { FILTRO_PEND.termo = v; renderTabelaPend(filtrados()); });
+}
+
 function render(regs) {
   REGISTROS = regs;
+  montarBusca();
   renderFiltroAno();
   const f = filtrados();
   const a = agregar(f);
