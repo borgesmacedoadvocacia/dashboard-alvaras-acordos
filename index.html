@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<script>
+/* Central BM — o acesso a este dashboard agora é pela central única.
+   Link antigo/acesso direto é remanejado para a central; dentro dela,
+   com a sessão ativa, a página abre normalmente. */
+(function () {
+  var PORTAL = 'https://borgesmacedoadvocacia.github.io/';
+  if (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
+  function ir() { try { window.top.location.replace(PORTAL); } catch (e) { location.replace(PORTAL); } }
+  if (window.self === window.top) { ir(); return; }
+  var ok = false;
+  try { ok = sessionStorage.getItem('bm_portal_auth') === '1'; } catch (e) {}
+  if (!ok) { ir(); return; }
+  document.documentElement.setAttribute('data-portal', '1');
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Alvarás e Acordos | Borges Macedo</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  * { -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b26;
+    --bg3: #1e2536;
+    --bg4: #232c42;
+    --azul: #2563eb;
+    --azul-claro: #3b82f6;
+    --verde: #22c55e;
+    --verde-fraco: rgba(34,197,94,0.13);
+    --vermelho: #ef4444;
+    --vermelho-fraco: rgba(239,68,68,0.13);
+    --amarelo: #f59e0b;
+    --amarelo-fraco: rgba(245,158,11,0.13);
+    --roxo: #a855f7;
+    --ciano: #06b6d4;
+    --texto: #e2e8f0;
+    --texto-muted: #64748b;
+    --borda: #1e2d4a;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  html { font-size: 15px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--texto);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 3rem;
+    overflow-x: hidden;
+  }
+
+  /* ===== CABEÇALHO ===== */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+    padding: 1rem 1.75rem;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--borda);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo { display: flex; align-items: center; gap: 0.75rem; }
+  .logo-img { height: 38px; width: auto; object-fit: contain; }
+  .logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .logo-name { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .logo-sub { font-size: 0.63rem; color: var(--texto-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+  .header-updated { font-size: 0.72rem; color: var(--texto-muted); }
+  .btn-atualizar {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.85rem; background: transparent;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    color: var(--texto); font-size: 0.8rem; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s;
+  }
+  .btn-atualizar:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.3); }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1500px; margin: 0 auto; padding: 1.5rem 1.75rem; }
+  .secao { margin-bottom: 2rem; }
+  .secao-titulo {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 0.95rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 0.35rem;
+  }
+  .secao-titulo::before { content: ''; width: 3px; height: 17px; background: var(--azul-claro); border-radius: 2px; }
+  .secao-sub { font-size: 0.78rem; color: var(--texto-muted); margin-bottom: 1rem; margin-left: 0.9rem; }
+
+  .card {
+    background: var(--bg2); border: 1px solid var(--borda);
+    border-radius: var(--radius); padding: 1.15rem; box-shadow: var(--shadow);
+  }
+
+  /* ===== KPIs ===== */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.9rem; }
+  .kpi { position: relative; overflow: hidden; }
+  .kpi::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--azul-claro); }
+  .kpi.verde::after { background: var(--verde); }
+  .kpi.vermelho::after { background: var(--vermelho); }
+  .kpi.amarelo::after { background: var(--amarelo); }
+  .kpi.roxo::after { background: var(--roxo); }
+  .kpi-topo { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.55rem; }
+  .kpi-nome { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--texto-muted); font-weight: 700; }
+  .kpi-pct {
+    font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; white-space: nowrap;
+  }
+  .kpi-pct.verde { background: var(--verde-fraco); color: var(--verde); }
+  .kpi-pct.vermelho { background: var(--vermelho-fraco); color: var(--vermelho); }
+  .kpi-pct.amarelo { background: var(--amarelo-fraco); color: var(--amarelo); }
+  .kpi-pct.neutro { background: var(--bg3); color: var(--texto-muted); }
+  .kpi-valor { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+  .kpi-rodape { margin-top: 0.6rem; padding-top: 0.55rem; border-top: 1px solid var(--borda); font-size: 0.75rem; color: var(--texto-muted); display:flex; flex-direction:column; gap:.2rem; }
+  .kpi-rodape span b { color: var(--texto); font-weight: 600; }
+
+  /* ===== BARRA DE PROGRESSO ===== */
+  .barra-fundo { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-top: .5rem; }
+  .barra-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+
+  /* ===== TABELAS ===== */
+  .tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 640px; }
+  thead th {
+    text-align: right; padding: 0.6rem 0.7rem; font-size: 0.67rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--texto-muted); font-weight: 700;
+    border-bottom: 1px solid var(--borda); white-space: nowrap; background: var(--bg2);
+    position: sticky; top: 0;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 0.55rem 0.7rem; text-align: right; border-bottom: 1px solid rgba(30,45,74,0.5); white-space: nowrap; }
+  tbody td:first-child { text-align: left; white-space: normal; }
+  tbody tr.destaque { background: rgba(255,255,255,0.04); }
+  tbody tr.destaque td { font-weight: 800; border-top: 1px solid var(--borda); }
+  .tag-pct { font-weight: 800; padding: 0.1rem 0.5rem; border-radius: 5px; font-size: 0.76rem; display:inline-block; }
+  .tag-pct.verde { background: var(--verde-fraco); color: var(--verde); }
+  .tag-pct.vermelho { background: var(--vermelho-fraco); color: var(--vermelho); }
+  .tag-pct.amarelo { background: var(--amarelo-fraco); color: var(--amarelo); }
+  .tag-pct.neutro { background: var(--bg3); color: var(--texto-muted); }
+  .val-neg { color: var(--vermelho); font-weight: 600; }
+  .val-pos { color: var(--verde); font-weight: 600; }
+
+  /* ===== FILTROS (CHIPS) ===== */
+  .filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.9rem; }
+  .filtros .sep { width: 1px; align-self: stretch; background: var(--borda); margin: 0 0.35rem; }
+  .chip {
+    background: var(--bg3); border: 1px solid var(--borda); border-radius: 999px;
+    color: var(--texto-muted); font-size: 0.74rem; font-weight: 600; font-family: inherit;
+    padding: 0.3rem 0.75rem; cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .chip:hover { color: var(--texto); border-color: rgba(255,255,255,0.25); }
+  .chip.ativo { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .tag-aba {
+    display: inline-block; padding: 0.12rem 0.5rem; border-radius: 5px;
+    font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+  }
+
+  /* ===== GRÁFICOS ===== */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(370px, 1fr)); gap: 1rem; }
+  .grafico-box { position: relative; width: 100%; }
+  .grafico-box.alto { height: 360px; }
+  .grafico-box.medio { height: 300px; }
+
+  /* ===== RESUMO POR ABA ===== */
+  .resumo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.9rem; margin-bottom: 1rem; }
+  .resumo-item { background: var(--bg3); border: 1px solid var(--borda); border-radius: 10px; padding: 0.9rem; }
+  .resumo-nome { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-muted); font-weight: 700; margin-bottom: 0.35rem; }
+  .resumo-valor { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+  .resumo-nota { font-size: 0.71rem; color: var(--texto-muted); margin-top: 0.25rem; }
+
+  /* ===== OBSERVAÇÕES ===== */
+  .obs-lista { display: flex; flex-direction: column; gap: 0.6rem; }
+  .obs {
+    display: flex; gap: 0.75rem; padding: 0.8rem 0.95rem;
+    background: var(--bg3); border-radius: 10px;
+    border-left: 3px solid var(--texto-muted);
+  }
+  .obs.critico { border-left-color: var(--vermelho); background: rgba(239,68,68,0.07); }
+  .obs.atencao { border-left-color: var(--amarelo); background: rgba(245,158,11,0.06); }
+  .obs.bom { border-left-color: var(--verde); background: rgba(34,197,94,0.06); }
+  .obs.info { border-left-color: var(--azul-claro); }
+  .obs-icone { font-size: 1rem; line-height: 1.35; flex-shrink: 0; }
+  .obs-corpo { flex: 1; min-width: 0; }
+  .obs-titulo { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.15rem; }
+  .obs-texto { font-size: 0.8rem; color: var(--texto-muted); line-height: 1.5; }
+  .obs-texto b { color: var(--texto); font-weight: 600; }
+  .obs-vazio { padding: 1.5rem; text-align: center; color: var(--texto-muted); font-size: 0.85rem; }
+
+  /* ===== ESTADOS ===== */
+  .estado { padding: 3rem 1.5rem; text-align: center; color: var(--texto-muted); }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 1rem;
+    border: 3px solid var(--bg3); border-top-color: var(--azul-claro);
+    border-radius: 50%; animation: girar .8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .erro-box {
+    background: rgba(239,68,68,0.1); border: 1px solid var(--vermelho);
+    border-radius: var(--radius); padding: 1rem; margin: 1rem 1.75rem;
+    color: #fca5a5; font-size: 0.85rem; line-height: 1.5;
+  }
+  .oculto { display: none !important; }
+
+  .rodape { text-align: center; font-size: 0.72rem; color: var(--texto-muted); padding: 1.5rem; line-height: 1.7; }
+  .rodape a { color: var(--azul-claro); text-decoration: none; }
+
+  /* ===== TELA DE LOGIN ===== */
+  .login-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: radial-gradient(circle at 50% 0%, #1a2338 0%, var(--bg) 62%);
+    display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+  }
+  .login-caixa {
+    width: 100%; max-width: 372px;
+    background: var(--bg2); border: 1px solid var(--borda);
+    border-radius: 16px; padding: 2rem 1.75rem;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  }
+  .login-logo { display: block; height: 46px; margin: 0 auto 1.15rem; object-fit: contain; }
+  .login-titulo { text-align: center; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.02em; }
+  .login-sub {
+    text-align: center; font-size: 0.72rem; color: var(--texto-muted);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem; margin-bottom: 1.6rem;
+  }
+  .campo-grupo { margin-bottom: 0.9rem; }
+  .campo-rotulo {
+    display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--texto-muted); font-weight: 700; margin-bottom: 0.35rem;
+  }
+  .campo-texto {
+    width: 100%; background: var(--bg3); border: 1px solid var(--borda);
+    color: var(--texto); border-radius: 9px; padding: 0.68rem 0.85rem;
+    font-size: 0.92rem; font-family: inherit; outline: none; transition: border-color .15s;
+  }
+  .campo-texto:focus { border-color: var(--azul-claro); }
+  .campo-texto::placeholder { color: #47536b; }
+  .btn-entrar {
+    width: 100%; margin-top: 0.5rem; padding: 0.72rem;
+    background: var(--azul); border: none; border-radius: 9px;
+    color: #fff; font-size: 0.92rem; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn-entrar:hover:not(:disabled) { background: var(--azul-claro); }
+  .btn-entrar:disabled { opacity: 0.6; cursor: default; }
+  .login-erro {
+    margin-top: 0.9rem; padding: 0.6rem 0.75rem; border-radius: 8px;
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.45);
+    color: #fca5a5; font-size: 0.79rem; line-height: 1.45; text-align: center;
+  }
+  .login-rodape {
+    margin-top: 1.35rem; padding-top: 1rem; border-top: 1px solid var(--borda);
+    font-size: 0.7rem; color: var(--texto-muted); text-align: center; line-height: 1.55;
+  }
+  .btn-sair {
+    background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    color: var(--texto-muted); font-size: 0.75rem; font-family: inherit;
+    padding: 0.3rem 0.6rem; cursor: pointer; transition: all .15s;
+  }
+  .btn-sair:hover { color: var(--vermelho); border-color: var(--vermelho); }
+  /* Dentro da central o encerramento de sessão é feito pela própria central */
+  html[data-portal] .btn-sair { display: none; }
+
+  @media (max-width: 720px) {
+    html { font-size: 14px; }
+    .header { padding: 0.85rem 1rem; }
+    .container { padding: 1.1rem 1rem; }
+    .kpi-valor { font-size: 1.3rem; }
+    .grafico-box.alto { height: 300px; }
+    .grafico-box.medio { height: 260px; }
+  }
+  .filtro-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-muted); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <form class="login-caixa" id="loginForm" autocomplete="on">
+    <img src="logo.png" alt="Borges Macedo Advocacia" class="login-logo" onerror="this.style.display='none'" />
+    <div class="login-titulo">Alvarás e Acordos</div>
+    <div class="login-sub">Acesso restrito</div>
+
+    <div class="campo-grupo">
+      <label class="campo-rotulo" for="campoUsuario">Login</label>
+      <input class="campo-texto" type="text" id="campoUsuario" name="username"
+             autocomplete="username" placeholder="Usuário" required />
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-rotulo" for="campoSenha">Senha</label>
+      <input class="campo-texto" type="password" id="campoSenha" name="password"
+             autocomplete="current-password" placeholder="••••••••" required />
+    </div>
+
+    <button type="submit" class="btn-entrar" id="btnEntrar">Entrar</button>
+    <div class="login-erro oculto" id="loginErro"></div>
+
+    <div class="login-rodape">
+      Painel exclusivo das lideranças.<br />
+      A sessão termina ao fechar a aba.
+    </div>
+  </form>
+</div>
+
+<header class="header oculto" id="cabecalho">
+  <div class="header-logo">
+    <img src="logo.png" alt="Borges Macedo Advocacia" class="logo-img" onerror="this.style.display='none'" />
+    <div class="logo-text">
+      <span class="logo-name">Alvarás e Acordos</span>
+      <span class="logo-sub">Borges Macedo Advocacia · Recebimentos e Repasses</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div style="display:flex;gap:.4rem;align-items:center">
+      <button class="btn-atualizar" id="btnAtualizar">&#10227; Atualizar</button>
+      <button class="btn-sair" id="btnSair" title="Encerrar a sessão">Sair</button>
+    </div>
+    <span class="header-updated" id="atualizadoEm">—</span>
+  </div>
+</header>
+
+<div id="erroBox" class="erro-box oculto"></div>
+
+<div id="carregando" class="estado oculto">
+  <div class="spinner"></div>
+  Carregando dados da planilha…
+</div>
+
+<main class="container oculto" id="conteudo">
+  <section class="secao">
+    <div class="secao-titulo">Resumo Executivo</div>
+    <div class="secao-sub" id="subResumo">—</div>
+    <div class="filtros" id="filtrosAno"></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Para Onde Vai o Dinheiro</div>
+    <div class="secao-sub">De cada real creditado em conta, quanto fica com o escritório, quanto vai para parceiros e quanto é repassado ao cliente.</div>
+    <div class="resumo-grid" id="resumoRateio"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="secao-sub" style="margin:0 0 .6rem 0">Rateio do valor creditado</div>
+        <div class="grafico-box medio"><canvas id="grafRateio"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="secao-sub" style="margin:0 0 .6rem 0">Take rate por tipo de honorários</div>
+        <div class="grafico-box medio"><canvas id="grafTipoHon"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Evolução Mensal</div>
+    <div class="secao-sub">Valor creditado e honorários do escritório mês a mês, com o take rate de cada mês.</div>
+    <div class="card">
+      <div class="grafico-box alto"><canvas id="grafEvolucao"></canvas></div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Comparativo Anual</div>
+    <div class="secao-sub">Base histórica completa, independente do filtro de ano acima.</div>
+    <div class="card">
+      <div class="tabela-wrap">
+        <table id="tabelaAnos">
+          <thead>
+            <tr>
+              <th>Ano</th><th>Alvarás</th><th>Valor Creditado</th><th>Honorários BM</th>
+              <th>Take Rate</th><th>Ticket Médio</th><th>Repasse Parceiros</th><th>Devido ao Cliente</th>
+            </tr>
+          </thead>
+          <tbody id="corpoAnos"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Pendências Financeiras e Prazos</div>
+    <div class="secao-sub">Dinheiro creditado que ainda não foi repassado, e o tempo médio entre o crédito em conta e o repasse.</div>
+    <div class="resumo-grid" id="resumoPendencias"></div>
+    <div class="card">
+      <div class="filtros" id="filtrosPend">
+        <button type="button" class="chip ativo" data-f="pendentes">Com pendência</button>
+        <button type="button" class="chip" data-f="bm">Repasse ao BM em aberto</button>
+        <button type="button" class="chip" data-f="cliente">Repasse ao cliente em aberto</button>
+        <button type="button" class="chip" data-f="fluxo">Não lançado no fluxo</button>
+        <button type="button" class="chip" data-f="todos">Todos</button>
+      </div>
+      <div class="tabela-wrap">
+        <table id="tabelaPend">
+          <thead>
+            <tr>
+              <th>Cliente / Processo</th><th>Crédito</th><th>Creditado</th>
+              <th>Honorários</th><th>Devido ao Cliente</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody id="corpoPend"></tbody>
+        </table>
+      </div>
+      <div class="secao-sub" id="notaPend" style="margin:.6rem 0 0 0"></div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Concentração de Clientes</div>
+    <div class="secao-sub">Maiores clientes por valor creditado e por honorários gerados ao escritório no período filtrado.</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="secao-sub" style="margin:0 0 .6rem 0">Top clientes por valor creditado</div>
+        <div class="grafico-box medio"><canvas id="grafClientes"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="secao-sub" style="margin:0 0 .6rem 0">Faixas de ticket</div>
+        <div class="grafico-box medio"><canvas id="grafFaixas"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="secao-titulo">Pontos de Atenção</div>
+    <div class="secao-sub">Gerados automaticamente a partir dos dados atuais da planilha.</div>
+    <div class="obs-lista" id="listaAtencao"></div>
+  </section>
+
+</main>
+
+<footer class="rodape">
+  Borges Macedo Advocacia · Recebimentos e Repasses · Atualização automática a cada 5 min<br />
+  <a href="#" id="linkPlanilha" target="_blank" rel="noopener">Abrir planilha no Google Sheets</a>
+</footer>
+
+<script>
+/* =========================================================================
+   COFRES — {SHEET_ID, GOOGLE_API_KEY} cifrados com AES-256-GCM, um cofre por
+   perfil autorizado. Este painel é exclusivo das lideranças: só os perfis
+   Administração e Lideranças têm cofre aqui. Sem a credencial correta a
+   decifragem falha e a página não sabe qual planilha ler.
+   ========================================================================= */
+const COFRES = [
+  /* Administração */
+  {"v":1,"it":310000,"salt":"dd01eJEpTq3d7McDashSjg==","iv":"UaK0Mnxtp1yXrsJJ","ct":"fgeRJ8Z7NvfA4tMWV5TPq1yrfKu008SzgE0k1pdPgw2iUkT0NTtsnAg/XlB3tp6doRchtbJn3HNjwG1fHSpfxBeEybETTIwFAij5MZKyb9SfJw0O4OsHPBiYUbue1vCEsV2UgZcOYkXsk4OeRIHtYfPy0po3sKFES0WIJEa8h3ERRwbpog8="},
+  /* Lideranças */
+  {"v":1,"it":310000,"salt":"318h0QT+dMasFmuPSkYkzQ==","iv":"t8X4msT53qXW11Cq","ct":"hXNGJQHx3z4xiuueEUmOwfRlH9I45eegWtc+HptLX1i3SmOQ5D5RhcDjbM7d81kd1bIOrdl+dB1qabX5AzttYk+FZkTgmItnCVIvh9RGELo6YsTmd6oNlL0Lrx0iHj0hxKzTpNvdVqlVrAv43mzn/iintKbksUlW8yUkS5VWaIugRq9ligk="}
+];
+
+const b64bytes = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+const normUsuario = u => u.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+async function abrirUmCofre(cofre, usuario, senha) {
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    'raw', enc.encode(normUsuario(usuario) + '\n' + senha), 'PBKDF2', false, ['deriveKey']);
+  const chave = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b64bytes(cofre.salt), iterations: cofre.it, hash: 'SHA-256' },
+    material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const claro = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: b64bytes(cofre.iv) }, chave, b64bytes(cofre.ct));
+  return JSON.parse(new TextDecoder().decode(claro));
+}
+
+async function abrirCofre(usuario, senha) {
+  for (const cofre of COFRES) {
+    try { return await abrirUmCofre(cofre, usuario, senha); } catch (e) {}
+  }
+  throw new Error('credenciais sem acesso a este painel');
+}
+
+const CONFIG = { SHEET_ID: null, GOOGLE_API_KEY: null, AUTO_REFRESH_MIN: 5 };
+
+/* ===== utilitários comuns ===== */
+const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtBRL0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const fmtNum = new Intl.NumberFormat('pt-BR');
+function moeda(v) { return fmtBRL.format(v || 0); }
+function moedaCurta(v) { return fmtBRL0.format(v || 0); }
+function num(v) { return fmtNum.format(v || 0); }
+function pct1(v) { return (v === null || !isFinite(v)) ? '—' : v.toFixed(1).replace('.', ',') + '%'; }
+function pct0(v) { return (v === null || !isFinite(v)) ? '—' : Math.round(v) + '%'; }
+
+function parseNumBR(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  if (v === null || v === undefined) return 0;
+  let t = String(v).replace(/\u00a0/g, ' ').trim();
+  if (t === '' || t === '-') return 0;
+  t = t.replace(/R\$/gi, '').replace(/\s/g, '');
+  if (t === '' || t === '-') return 0;
+  const negativo = t.startsWith('-') || /^\(.*\)$/.test(t);
+  t = t.replace(/[()\-+]/g, '');
+  t = t.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(t);
+  if (!isFinite(n)) return 0;
+  return negativo ? -n : n;
+}
+
+/** dd/mm/aaaa -> Date. Datas-fantasma do Sheets (1899/1900) contam como vazio. */
+function parseDataBR(v) {
+  if (!v) return null;
+  const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let ano = Number(m[3]);
+  if (ano < 100) ano += 2000;
+  if (ano < 1950) return null;
+  const dt = new Date(ano, Number(m[2]) - 1, Number(m[1]));
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES_NORM = MESES.map(m => m.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+
+/** "Agosto/25", "Agosto/2025" -> {ano, mes}. "Dezembro/99" = vazio. */
+function parseMesRotulo(v) {
+  if (!v) return null;
+  const t = String(v).trim();
+  const m = t.match(/^([A-Za-zÀ-ÿ]+)\s*\/\s*(\d{2,4})$/);
+  if (!m) return null;
+  const nome = m[1].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const idx = MESES_NORM.findIndex(x => x === nome);
+  if (idx < 0) return null;
+  let ano = Number(m[2]);
+  if (ano < 100) ano += 2000;
+  if (ano < 2015 || ano > 2100) return null;   // Dezembro/99 -> 2099, descartado
+  return { ano, mes: idx };
+}
+function ordemMes(i) { return i.ano * 12 + i.mes; }
+function labelMes(i) { return MESES_CURTO[i.mes] + '/' + String(i.ano).slice(2); }
+function labelMesData(d) { return MESES_CURTO[d.getMonth()] + '/' + String(d.getFullYear()).slice(2); }
+function hojeZerado() { const h = new Date(); h.setHours(0,0,0,0); return h; }
+function diasEntre(a, b) { return Math.round((b - a) / 86400000); }
+
+function colIdx(letra) {
+  let n = 0;
+  for (const c of letra.toUpperCase()) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+/** Lê uma célula por nome de cabeçalho, com fallback pela letra da coluna. */
+function campo(linha, cab, nome, letra) {
+  let i = cab.indexOf(nome);
+  if (i < 0 && letra) i = colIdx(letra);
+  if (i < 0) return '';
+  const v = linha[i];
+  return v === undefined || v === null ? '' : String(v).trim();
+}
+
+/* ===== leitura via Sheets API v4 ===== */
+async function lerAbas(ranges) {
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.SHEET_ID + '/values:batchGet';
+  const p = new URLSearchParams();
+  ranges.forEach(r => p.append('ranges', r));
+  p.append('valueRenderOption', 'FORMATTED_VALUE');
+  p.append('key', CONFIG.GOOGLE_API_KEY);
+  const resp = await fetch(base + '?' + p.toString(), { cache: 'no-store' });
+  if (!resp.ok) throw new Error('Sheets API ' + resp.status);
+  const json = await resp.json();
+  return (json.valueRanges || []).map(vr => vr.values || []);
+}
+
+/** Separa cabeçalho e linhas com conteúdo; remove repetições do cabeçalho no meio. */
+function tabela(rows) {
+  if (!rows || !rows.length) return { cab: [], linhas: [] };
+  const cab = rows[0].map(h => String(h).trim());
+  const assinatura = cab.filter(Boolean).slice(0, 3).join('|');
+  const linhas = rows.slice(1).filter(r => {
+    if (!r.some(c => String(c).trim())) return false;
+    const sig = r.map(c => String(c).trim()).filter(Boolean).slice(0, 3).join('|');
+    return sig !== assinatura;
+  });
+  return { cab, linhas };
+}
+
+/* ===== gráficos ===== */
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = "'Segoe UI', system-ui, -apple-system, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.legend.labels.padding = 14;
+
+const COR_AZUL = '#3b82f6', COR_VERDE = '#22c55e', COR_VERMELHO = '#ef4444',
+      COR_AMARELO = '#f59e0b', COR_ROXO = '#a855f7', COR_CIANO = '#06b6d4',
+      COR_ROSA = '#ec4899', COR_MUTED = '#64748b', COR_BORDA = 'rgba(255,255,255,0.06)';
+const PALETA = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6','#8b5cf6','#eab308'];
+
+let graficos = {};
+function destruir(id) { if (graficos[id]) { graficos[id].destroy(); delete graficos[id]; } }
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+
+function cartaoKPI(nome, valor, cor, rodape, pct) {
+  return '<div class="card kpi ' + cor + '">' +
+    '<div class="kpi-topo"><span class="kpi-nome">' + nome + '</span>' +
+    (pct !== undefined && pct !== null ? '<span class="kpi-pct ' + (cor === 'vermelho' ? 'vermelho' : cor === 'amarelo' ? 'amarelo' : cor === 'verde' ? 'verde' : 'neutro') + '">' + pct + '</span>' : '') +
+    '</div><div class="kpi-valor">' + valor + '</div>' +
+    (rodape ? '<div class="kpi-rodape"><span>' + rodape + '</span></div>' : '') + '</div>';
+}
+function itemResumo(nome, valor, nota, cor) {
+  return '<div class="resumo-item"><div class="resumo-nome"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + nome + '</div>' +
+    '<div class="resumo-valor">' + valor + '</div>' +
+    '<div class="resumo-nota">' + (nota || '') + '</div></div>';
+}
+function obsCard(tipo, icone, titulo, texto) {
+  return '<div class="obs ' + tipo + '"><div class="obs-icone">' + icone + '</div><div class="obs-corpo">' +
+    '<div class="obs-titulo">' + titulo + '</div><div class="obs-texto">' + texto + '</div></div></div>';
+}
+function esc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function topN(mapa, n, rotuloOutros) {
+  const e = Object.entries(mapa).sort((a, b) => b[1] - a[1]);
+  const topo = e.slice(0, n);
+  const resto = e.slice(n).reduce((s, [, v]) => s + v, 0);
+  if (resto > 0) topo.push([rotuloOutros || 'Outros', resto]);
+  return topo;
+}
+
+/* =========================================================================
+   APLICAÇÃO
+   ========================================================================= */
+/* Abas por ano. O layout de 2024 tem menos colunas que 2025/2026, por isso
+   toda leitura é por NOME de cabeçalho (com fallback por letra de coluna). */
+const ANOS = [
+  { ano: 2024, aba: '2024' },
+  { ano: 2025, aba: '2025' },
+  { ano: 2026, aba: '2026' }
+];
+
+let ANO_SEL = 'todos';
+let REGISTROS = [];
+const FILTRO_PEND = { f: 'pendentes' };
+
+async function buscarTudo() {
+  const faixas = ANOS.map(a => "'" + a.aba + "'!A1:X1000");
+  const blocos = await lerAbas(faixas);
+  const out = [];
+  blocos.forEach((rows, i) => {
+    const { cab, linhas } = tabela(rows);
+    const ano = ANOS[i].ano;
+    linhas.forEach(l => {
+      const cliente = campo(l, cab, 'Cliente', 'B') || campo(l, cab, 'Cliente (Nome Completo)', 'B');
+      const creditado = parseNumBR(campo(l, cab, 'Valor Creditado', 'G'));
+      if (!cliente && !creditado) return;
+      const dataCred = parseDataBR(campo(l, cab, 'Data do Crédito em Conta', 'H'));
+      const solicitado = parseNumBR(campo(l, cab, 'Valor Solicitado', 'F'));
+      const honorarios = parseNumBR(campo(l, cab, 'Valor dos Honorários', 'K'));
+      const parceiros = parseNumBR(campo(l, cab, 'Repasse a Parceiros', 'N'));
+      const devidoCliente = parseNumBR(campo(l, cab, 'Valor Devido ao Cliente'));
+      out.push({
+        ano, cliente, doc: campo(l, cab, 'CPF/CNPJ do Cliente', 'C'),
+        processo: campo(l, cab, 'Processo', 'D'),
+        solicitado, creditado, honorarios, parceiros, devidoCliente,
+        dataCred,
+        mesRotulo: campo(l, cab, 'Mês do Crédito', 'I'),
+        tipoHon: campo(l, cab, 'Tipo de Honorários', 'J') || 'Não informado',
+        repasseBM: campo(l, cab, 'Repasse ao BM', 'L'),
+        dataRepasseBM: parseDataBR(campo(l, cab, 'Data Repasse ao BM', 'M')),
+        repasseCliente: campo(l, cab, 'Repasse ao Cliente'),
+        dataRepasseCliente: parseDataBR(campo(l, cab, 'Data do Repasse ao Cliente')),
+        lancadoFluxo: campo(l, cab, 'Lançado no Fluxo de Honorários'),
+        observacoes: campo(l, cab, 'Observações')
+      });
+    });
+  });
+  return out;
+}
+
+/** Repasse quitado = "Pago" ou "Dispensado"; qualquer outra coisa fica em aberto. */
+function quitado(v) {
+  const t = (v || '').toLowerCase();
+  return t.startsWith('pago') || t.startsWith('dispensad') || t === 'não há' || t === 'nao ha';
+}
+
+function filtrados() {
+  return ANO_SEL === 'todos' ? REGISTROS : REGISTROS.filter(r => r.ano === Number(ANO_SEL));
+}
+
+function agregar(regs) {
+  const a = {
+    qtd: regs.length,
+    solicitado: 0, creditado: 0, honorarios: 0, parceiros: 0, devidoCliente: 0,
+    pendBM: 0, pendBMValor: 0, pendCliente: 0, pendClienteValor: 0,
+    naoLancado: 0, naoLancadoValor: 0,
+    // Rateio comparável: só entra quem tem o destino do dinheiro preenchido.
+    semRateio: 0, semRateioValor: 0,
+    // Glosa comparável: só entra quem tem solicitado E creditado preenchidos.
+    baseGlosaSolic: 0, baseGlosaCred: 0, qtdGlosa: 0,
+    prazosCliente: [], prazosBM: []
+  };
+  regs.forEach(r => {
+    a.solicitado += r.solicitado; a.creditado += r.creditado;
+    a.honorarios += r.honorarios; a.parceiros += r.parceiros;
+    a.devidoCliente += r.devidoCliente;
+    if (r.creditado > 0 && (r.honorarios + r.parceiros + r.devidoCliente) === 0) {
+      a.semRateio++; a.semRateioValor += r.creditado;
+    }
+    if (r.solicitado > 0 && r.creditado > 0) {
+      a.baseGlosaSolic += r.solicitado; a.baseGlosaCred += r.creditado; a.qtdGlosa++;
+    }
+    if (!quitado(r.repasseBM) && r.honorarios > 0) { a.pendBM++; a.pendBMValor += r.honorarios; }
+    if (!quitado(r.repasseCliente) && r.devidoCliente > 0) { a.pendCliente++; a.pendClienteValor += r.devidoCliente; }
+    // "Lançado no Fluxo" só existe a partir de 2025; ausência no layout antigo não é falha
+    if (r.ano >= 2025 && r.lancadoFluxo && !/^sim|^não há|^nao ha/i.test(r.lancadoFluxo)) {
+      a.naoLancado++; a.naoLancadoValor += r.honorarios;
+    }
+    if (r.dataCred && r.dataRepasseCliente) {
+      const d = diasEntre(r.dataCred, r.dataRepasseCliente);
+      if (d >= 0 && d < 400) a.prazosCliente.push(d);
+    }
+    if (r.dataCred && r.dataRepasseBM) {
+      const d = diasEntre(r.dataCred, r.dataRepasseBM);
+      if (d >= 0 && d < 400) a.prazosBM.push(d);
+    }
+  });
+  a.glosa = a.baseGlosaSolic - a.baseGlosaCred;
+  a.takeRate = a.creditado > 0 ? a.honorarios / a.creditado * 100 : null;
+  a.ticket = a.qtd ? a.creditado / a.qtd : 0;
+  a.prazoMedioCliente = media(a.prazosCliente);
+  a.prazoMedioBM = media(a.prazosBM);
+  return a;
+}
+function media(v) { return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; }
+
+function renderFiltroAno() {
+  const el = document.getElementById('filtrosAno');
+  const anos = [...new Set(REGISTROS.map(r => r.ano))].sort();
+  el.innerHTML = '<span class="filtro-label" style="margin-right:.3rem">Exercício</span>' +
+    '<button type="button" class="chip' + (ANO_SEL === 'todos' ? ' ativo' : '') + '" data-ano="todos">Todos</button>' +
+    anos.map(a => '<button type="button" class="chip' + (String(ANO_SEL) === String(a) ? ' ativo' : '') +
+      '" data-ano="' + a + '">' + a + '</button>').join('');
+  el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+    ANO_SEL = b.dataset.ano; render(REGISTROS);
+  }));
+}
+
+function renderKPIs(regs, a) {
+  const rot = ANO_SEL === 'todos' ? 'toda a base histórica' : 'exercício de ' + ANO_SEL;
+  document.getElementById('subResumo').textContent =
+    'Alvarás e acordos creditados em conta — ' + rot + '.';
+
+  const corTake = a.takeRate === null ? 'azul' : a.takeRate >= 25 ? 'verde' : a.takeRate >= 15 ? 'amarelo' : 'vermelho';
+  const pendTotal = a.pendBMValor + a.pendClienteValor;
+
+  document.getElementById('kpis').innerHTML = [
+    cartaoKPI('Valor Creditado', moeda(a.creditado), 'azul',
+      '<span><b>' + a.qtd + '</b> alvará' + (a.qtd === 1 ? '' : 's') + ' creditado' + (a.qtd === 1 ? '' : 's') + ' em conta</span>'),
+    cartaoKPI('Honorários do Escritório', moeda(a.honorarios), corTake,
+      '<span>take rate sobre o valor creditado</span>', pct1(a.takeRate)),
+    cartaoKPI('Repasse a Parceiros', moeda(a.parceiros), 'roxo',
+      '<span>' + pct1(a.creditado > 0 ? a.parceiros / a.creditado * 100 : null) + ' do creditado</span>'),
+    cartaoKPI('Devido ao Cliente', moeda(a.devidoCliente), 'azul',
+      '<span>' + pct1(a.creditado > 0 ? a.devidoCliente / a.creditado * 100 : null) + ' do creditado</span>'),
+    cartaoKPI('Ticket Médio', moeda(a.ticket), 'azul',
+      '<span>valor creditado por alvará</span>'),
+    cartaoKPI('Solicitado × Creditado', moeda(Math.abs(a.glosa)), a.glosa > 0 ? 'amarelo' : 'verde',
+      '<span>' + (a.glosa > 0
+        ? 'creditado <b>abaixo</b> do pedido — verificar glosas'
+        : 'creditado <b>acima</b> do pedido (juros e correção)') +
+      ' · base de <b>' + a.qtdGlosa + '</b> alvarás com os dois valores</span>'),
+    cartaoKPI('Repasses em Aberto', moeda(pendTotal), pendTotal > 0 ? 'vermelho' : 'verde',
+      '<span><b>' + (a.pendBM + a.pendCliente) + '</b> repasse' + (a.pendBM + a.pendCliente === 1 ? '' : 's') + ' aguardando pagamento</span>'),
+    cartaoKPI('Prazo Médio de Repasse', a.prazoMedioCliente === null ? '—' : a.prazoMedioCliente.toFixed(1).replace('.', ',') + ' dias',
+      a.prazoMedioCliente === null ? 'azul' : a.prazoMedioCliente <= 5 ? 'verde' : a.prazoMedioCliente <= 15 ? 'amarelo' : 'vermelho',
+      '<span>do crédito em conta até o repasse ao cliente</span>')
+  ].join('');
+}
+
+function renderRateio(a) {
+  const outros = Math.max(0, a.creditado - a.honorarios - a.parceiros - a.devidoCliente);
+  document.getElementById('resumoRateio').innerHTML = [
+    itemResumo('Escritório (BM)', moeda(a.honorarios), pct1(a.creditado > 0 ? a.honorarios / a.creditado * 100 : null) + ' do creditado', COR_VERDE),
+    itemResumo('Parceiros', moeda(a.parceiros), pct1(a.creditado > 0 ? a.parceiros / a.creditado * 100 : null) + ' do creditado', COR_ROXO),
+    itemResumo('Cliente', moeda(a.devidoCliente), pct1(a.creditado > 0 ? a.devidoCliente / a.creditado * 100 : null) + ' do creditado', COR_AZUL),
+    itemResumo('Sem rateio informado', moeda(outros),
+      outros > 0 ? a.semRateio + ' alvará' + (a.semRateio === 1 ? '' : 's') + ' sem o destino preenchido' : 'todo o creditado está rateado',
+      outros > 0 ? COR_AMARELO : COR_MUTED)
+  ].join('');
+
+  destruir('rateio');
+  graficos.rateio = new Chart(document.getElementById('grafRateio'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Escritório (BM)', 'Parceiros', 'Cliente'].concat(outros > 0 ? ['Sem rateio informado'] : []),
+      datasets: [{
+        data: [a.honorarios, a.parceiros, a.devidoCliente].concat(outros > 0 ? [outros] : []),
+        backgroundColor: [COR_VERDE, COR_ROXO, COR_AZUL, COR_AMARELO],
+        borderColor: '#161b26', borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: {
+        legend: { position: 'right' },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + moeda(ctx.parsed) +
+          ' (' + pct1(a.creditado > 0 ? ctx.parsed / a.creditado * 100 : null) + ')' } }
+      }
+    }
+  });
+}
+
+function renderTipoHonorarios(regs) {
+  const porTipo = {};
+  regs.forEach(r => {
+    const t = r.tipoHon || 'Não informado';
+    if (!porTipo[t]) porTipo[t] = { creditado: 0, honorarios: 0, qtd: 0 };
+    porTipo[t].creditado += r.creditado;
+    porTipo[t].honorarios += r.honorarios;
+    porTipo[t].qtd++;
+  });
+  const tipos = Object.entries(porTipo).sort((a, b) => b[1].creditado - a[1].creditado);
+
+  destruir('tipoHon');
+  graficos.tipoHon = new Chart(document.getElementById('grafTipoHon'), {
+    type: 'bar',
+    data: {
+      labels: tipos.map(([t]) => t),
+      datasets: [
+        { label: 'Valor creditado', data: tipos.map(([, v]) => v.creditado), backgroundColor: COR_AZUL, borderRadius: 4, maxBarThickness: 34 },
+        { label: 'Honorários BM', data: tipos.map(([, v]) => v.honorarios), backgroundColor: COR_VERDE, borderRadius: 4, maxBarThickness: 34 }
+      ]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: { x: { ticks: { callback: v => moedaCurta(v) }, grid: { color: COR_BORDA } }, y: { grid: { display: false } } },
+      plugins: {
+        tooltip: { callbacks: {
+          label: ctx => ctx.dataset.label + ': ' + moeda(ctx.parsed.x),
+          afterBody: itens => {
+            const t = tipos[itens[0].dataIndex][1];
+            return 'Take rate: ' + pct1(t.creditado > 0 ? t.honorarios / t.creditado * 100 : null) +
+                   '  ·  ' + t.qtd + ' alvará' + (t.qtd === 1 ? '' : 's');
+          }
+        } }
+      }
+    }
+  });
+}
+
+function renderEvolucao(regs) {
+  const mapa = {};
+  regs.forEach(r => {
+    if (!r.dataCred) return;
+    const o = r.dataCred.getFullYear() * 12 + r.dataCred.getMonth();
+    if (!mapa[o]) mapa[o] = { o, label: labelMesData(r.dataCred), creditado: 0, honorarios: 0, qtd: 0 };
+    mapa[o].creditado += r.creditado; mapa[o].honorarios += r.honorarios; mapa[o].qtd++;
+  });
+  const g = Object.values(mapa).sort((a, b) => a.o - b.o);
+
+  destruir('evolucao');
+  graficos.evolucao = new Chart(document.getElementById('grafEvolucao'), {
+    type: 'bar',
+    data: {
+      labels: g.map(x => x.label),
+      datasets: [
+        { label: 'Valor creditado', data: g.map(x => x.creditado), backgroundColor: COR_AZUL, borderRadius: 4, maxBarThickness: 40, order: 2 },
+        { label: 'Honorários BM', data: g.map(x => x.honorarios), backgroundColor: COR_VERDE, borderRadius: 4, maxBarThickness: 40, order: 2 },
+        { label: 'Take rate (%)', data: g.map(x => x.creditado > 0 ? x.honorarios / x.creditado * 100 : null),
+          type: 'line', borderColor: COR_AMARELO, backgroundColor: COR_AMARELO, borderWidth: 2,
+          pointRadius: 3, tension: 0.3, yAxisID: 'y1', order: 1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => moedaCurta(v) }, grid: { color: COR_BORDA } },
+        y1: { position: 'right', min: 0, suggestedMax: 60, ticks: { callback: v => v + '%' }, grid: { display: false } }
+      },
+      plugins: {
+        tooltip: { callbacks: {
+          label: ctx => ctx.dataset.label + ': ' +
+            (ctx.dataset.yAxisID === 'y1' ? pct1(ctx.parsed.y) : moeda(ctx.parsed.y)),
+          afterBody: itens => {
+            const x = g[itens[0].dataIndex];
+            return x.qtd + ' alvará' + (x.qtd === 1 ? '' : 's') + ' no mês';
+          }
+        } }
+      }
+    }
+  });
+}
+
+function renderComparativoAnos() {
+  const corpo = document.getElementById('corpoAnos');
+  const anos = [...new Set(REGISTROS.map(r => r.ano))].sort();
+  const linhas = anos.map(ano => {
+    const a = agregar(REGISTROS.filter(r => r.ano === ano));
+    return { ano, a };
+  });
+  const tot = agregar(REGISTROS);
+  corpo.innerHTML = linhas.map(({ ano, a }) => {
+    const cor = a.takeRate === null ? 'neutro' : a.takeRate >= 25 ? 'verde' : a.takeRate >= 15 ? 'amarelo' : 'vermelho';
+    return '<tr>' +
+      '<td><b>' + ano + '</b></td>' +
+      '<td>' + a.qtd + '</td>' +
+      '<td><b>' + moeda(a.creditado) + '</b></td>' +
+      '<td>' + moeda(a.honorarios) + '</td>' +
+      '<td><span class="tag-pct ' + cor + '">' + pct1(a.takeRate) + '</span></td>' +
+      '<td>' + moeda(a.ticket) + '</td>' +
+      '<td>' + moeda(a.parceiros) + '</td>' +
+      '<td>' + moeda(a.devidoCliente) + '</td></tr>';
+  }).join('') +
+  '<tr class="destaque"><td>Total</td><td>' + tot.qtd + '</td><td>' + moeda(tot.creditado) + '</td>' +
+  '<td>' + moeda(tot.honorarios) + '</td><td>' + pct1(tot.takeRate) + '</td><td>' + moeda(tot.ticket) + '</td>' +
+  '<td>' + moeda(tot.parceiros) + '</td><td>' + moeda(tot.devidoCliente) + '</td></tr>';
+}
+
+function renderPendencias(regs, a) {
+  document.getElementById('resumoPendencias').innerHTML = [
+    itemResumo('Honorários a receber', moeda(a.pendBMValor),
+      a.pendBM + ' repasse' + (a.pendBM === 1 ? '' : 's') + ' ao escritório em aberto', a.pendBM ? COR_VERMELHO : COR_VERDE),
+    itemResumo('A repassar ao cliente', moeda(a.pendClienteValor),
+      a.pendCliente + ' repasse' + (a.pendCliente === 1 ? '' : 's') + ' pendente' + (a.pendCliente === 1 ? '' : 's'), a.pendCliente ? COR_AMARELO : COR_VERDE),
+    itemResumo('Prazo médio ao cliente', a.prazoMedioCliente === null ? '—' : a.prazoMedioCliente.toFixed(1).replace('.', ',') + ' d',
+      'do crédito em conta até o repasse'),
+    itemResumo('Não lançado no fluxo', a.naoLancado + '',
+      a.naoLancado ? moeda(a.naoLancadoValor) + ' fora do fluxo de honorários' : 'toda a receita lançada', a.naoLancado ? COR_AMARELO : COR_VERDE)
+  ].join('');
+  renderTabelaPend(regs);
+}
+
+function renderTabelaPend(regs) {
+  const f = FILTRO_PEND.f;
+  const passa = r => {
+    const bm = !quitado(r.repasseBM) && r.honorarios > 0;
+    const cli = !quitado(r.repasseCliente) && r.devidoCliente > 0;
+    const flx = r.ano >= 2025 && r.lancadoFluxo && !/^sim|^não há|^nao ha/i.test(r.lancadoFluxo);
+    if (f === 'todos') return true;
+    if (f === 'bm') return bm;
+    if (f === 'cliente') return cli;
+    if (f === 'fluxo') return flx;
+    return bm || cli || flx;
+  };
+  const vis = regs.filter(passa).sort((x, y) => (y.creditado || 0) - (x.creditado || 0));
+  const corpo = document.getElementById('corpoPend');
+  corpo.innerHTML = vis.length ? vis.map(r => {
+    const tags = [];
+    if (!quitado(r.repasseBM) && r.honorarios > 0) tags.push('<span class="tag-pct vermelho">BM em aberto</span>');
+    if (!quitado(r.repasseCliente) && r.devidoCliente > 0) tags.push('<span class="tag-pct amarelo">Cliente em aberto</span>');
+    if (r.ano >= 2025 && r.lancadoFluxo && !/^sim|^não há|^nao ha/i.test(r.lancadoFluxo)) tags.push('<span class="tag-pct neutro">Fora do fluxo</span>');
+    if (!tags.length) tags.push('<span class="tag-pct verde">Quitado</span>');
+    return '<tr>' +
+      '<td><b>' + esc(r.cliente) + '</b><br><span style="color:var(--texto-muted);font-size:.75rem">' + esc(r.processo) + '</span></td>' +
+      '<td>' + (r.dataCred ? r.dataCred.toLocaleDateString('pt-BR') : '—') + '</td>' +
+      '<td><b>' + moeda(r.creditado) + '</b></td>' +
+      '<td>' + moeda(r.honorarios) + '</td>' +
+      '<td>' + moeda(r.devidoCliente) + '</td>' +
+      '<td>' + tags.join(' ') + '</td></tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--texto-muted);padding:1.2rem">Nenhum registro neste filtro.</td></tr>';
+  document.getElementById('notaPend').textContent =
+    'Exibindo ' + vis.length + ' de ' + regs.length + ' alvarás do período filtrado.';
+}
+
+function renderClientes(regs) {
+  const porCliente = {};
+  regs.forEach(r => {
+    const c = r.cliente || 'Não identificado';
+    porCliente[c] = (porCliente[c] || 0) + r.creditado;
+  });
+  const top = topN(porCliente, 8);
+
+  destruir('clientes');
+  graficos.clientes = new Chart(document.getElementById('grafClientes'), {
+    type: 'bar',
+    data: {
+      labels: top.map(([n]) => n.length > 24 ? n.slice(0, 22) + '…' : n),
+      datasets: [{ label: 'Valor creditado', data: top.map(([, v]) => v), backgroundColor: COR_AZUL, borderRadius: 4, maxBarThickness: 26 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: { x: { ticks: { callback: v => moedaCurta(v) }, grid: { color: COR_BORDA } }, y: { grid: { display: false } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => moeda(ctx.parsed.x) } } }
+    }
+  });
+
+  const faixas = [
+    { rot: 'Até R$ 1 mil', min: 0, max: 1000 },
+    { rot: 'R$ 1 a 5 mil', min: 1000, max: 5000 },
+    { rot: 'R$ 5 a 15 mil', min: 5000, max: 15000 },
+    { rot: 'R$ 15 a 30 mil', min: 15000, max: 30000 },
+    { rot: 'Acima de R$ 30 mil', min: 30000, max: Infinity }
+  ];
+  const cont = faixas.map(f => regs.filter(r => r.creditado >= f.min && r.creditado < f.max).length);
+  const val = faixas.map(f => regs.filter(r => r.creditado >= f.min && r.creditado < f.max)
+    .reduce((s, r) => s + r.creditado, 0));
+
+  destruir('faixas');
+  graficos.faixas = new Chart(document.getElementById('grafFaixas'), {
+    type: 'bar',
+    data: {
+      labels: faixas.map(f => f.rot),
+      datasets: [{ label: 'Alvarás', data: cont, backgroundColor: PALETA.slice(0, 5), borderRadius: 4, maxBarThickness: 46 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 }, grid: { color: COR_BORDA } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => ctx.parsed.y + ' alvará' + (ctx.parsed.y === 1 ? '' : 's'),
+          afterBody: itens => 'Soma da faixa: ' + moeda(val[itens[0].dataIndex])
+        } }
+      }
+    }
+  });
+}
+
+function renderAtencao(regs, a) {
+  const itens = [];
+
+  if (a.semRateio > 0) {
+    const porAno = {};
+    regs.forEach(r => {
+      if (r.creditado > 0 && (r.honorarios + r.parceiros + r.devidoCliente) === 0) {
+        porAno[r.ano] = (porAno[r.ano] || 0) + 1;
+      }
+    });
+    const detalhe = Object.entries(porAno).sort().map(([ano, n]) => '<b>' + ano + '</b>: ' + n).join(' · ');
+    itens.push(obsCard('critico', '🧮', 'Alvarás creditados sem destino do dinheiro informado',
+      '<b>' + a.semRateio + '</b> alvará' + (a.semRateio === 1 ? '' : 's') + ' somando <b>' + moeda(a.semRateioValor) +
+      '</b> têm valor creditado, mas nenhum valor de honorários, parceiro ou cliente preenchido (' + detalhe + '). ' +
+      'Enquanto essas linhas não forem completadas, o take rate e o rateio do período ficam subavaliados — este é o principal ' +
+      'ponto de conciliação da planilha.'));
+  }
+
+  if (a.pendBMValor > 0) {
+    itens.push(obsCard('critico', '💰', 'Honorários do escritório ainda não repassados',
+      '<b>' + moeda(a.pendBMValor) + '</b> em ' + a.pendBM + ' alvará' + (a.pendBM === 1 ? '' : 's') +
+      ' já creditado' + (a.pendBM === 1 ? '' : 's') + ' em conta, mas sem o repasse ao BM registrado como pago. É receita reconhecida que ainda não entrou no caixa do escritório.'));
+  }
+  if (a.pendClienteValor > 0) {
+    itens.push(obsCard('atencao', '🤝', 'Valores a repassar aos clientes',
+      '<b>' + moeda(a.pendClienteValor) + '</b> devidos a ' + a.pendCliente + ' cliente' + (a.pendCliente === 1 ? '' : 's') +
+      ' ainda sem repasse registrado. Além do risco reputacional, valores retidos além do razoável expõem o escritório a questionamento ético e disciplinar.'));
+  }
+  if (a.prazoMedioCliente !== null && a.prazoMedioCliente > 10) {
+    itens.push(obsCard('atencao', '⏱️', 'Prazo de repasse ao cliente acima do recomendável',
+      'A média está em <b>' + a.prazoMedioCliente.toFixed(1).replace('.', ',') + ' dias</b> entre o crédito em conta e o repasse. Prazos longos geram reclamação e dificultam a indicação — a referência de mercado é liquidar em até 5 dias úteis.'));
+  }
+  if (a.glosa > 0 && a.baseGlosaSolic > 0 && (a.glosa / a.baseGlosaSolic) > 0.02) {
+    itens.push(obsCard('atencao', '📉', 'Creditado abaixo do solicitado',
+      'Diferença de <b>' + moeda(a.glosa) + '</b> (' + pct1(a.glosa / a.baseGlosaSolic * 100) +
+      ' do total solicitado). Vale conferir se são glosas do juízo, erro de cálculo na petição ou lançamento incompleto na planilha.'));
+  } else if (a.glosa < 0) {
+    itens.push(obsCard('bom', '📈', 'Creditado acima do solicitado',
+      'O valor efetivamente creditado superou o solicitado em <b>' + moeda(-a.glosa) + '</b> nos ' + a.qtdGlosa +
+      ' alvarás com os dois valores lançados, o que normalmente reflete juros e correção monetária entre o pedido e o pagamento.'));
+  }
+  if (a.naoLancado > 0) {
+    itens.push(obsCard('atencao', '🧾', 'Receita fora do fluxo de honorários',
+      '<b>' + a.naoLancado + '</b> alvará' + (a.naoLancado === 1 ? '' : 's') + ' com honorários de <b>' + moeda(a.naoLancadoValor) +
+      '</b> não marcados como lançados no fluxo de honorários. Sem esse lançamento, o resultado do escritório fica subavaliado no financeiro.'));
+  }
+
+  // Concentração de clientes
+  const porCliente = {};
+  regs.forEach(r => { const c = r.cliente || 'Não identificado'; porCliente[c] = (porCliente[c] || 0) + r.creditado; });
+  const top = Object.entries(porCliente).sort((x, y) => y[1] - x[1]);
+  if (top.length && a.creditado > 0) {
+    const pctTop = top[0][1] / a.creditado * 100;
+    const top5 = top.slice(0, 5).reduce((s, [, v]) => s + v, 0) / a.creditado * 100;
+    itens.push(obsCard(pctTop > 25 ? 'atencao' : 'info', '🎯', 'Concentração da carteira',
+      'O maior cliente responde por <b>' + pct1(pctTop) + '</b> do valor creditado e os cinco maiores somam <b>' + pct1(top5) +
+      '</b>.' + (pctTop > 25 ? ' Concentração elevada: a saída de um único cliente teria impacto relevante no faturamento.' : ' Distribuição saudável, sem dependência de um único cliente.')));
+  }
+
+  // Take rate
+  if (a.takeRate !== null) {
+    const tipo = a.takeRate >= 25 ? 'bom' : a.takeRate >= 15 ? 'info' : 'atencao';
+    const icone = a.takeRate >= 25 ? '✅' : 'ℹ️';
+    itens.push(obsCard(tipo, icone, 'Take rate do escritório',
+      'De cada R$ 100 creditados, <b>' + (a.takeRate).toFixed(1).replace('.', ',') + '</b> ficam como honorários do BM' +
+      (a.parceiros > 0 ? ' e ' + (a.parceiros / a.creditado * 100).toFixed(1).replace('.', ',') + ' vão para parceiros' : '') +
+      '. ' + (a.takeRate < 15
+        ? 'Abaixo do padrão de contrato (20–30%)' + (a.semRateio ? ' — mas o número está contaminado pelos alvarás sem rateio informado acima; complete-os antes de concluir.' : ': verifique casos com honorários dispensados ou alvarás que são apenas repasse ao cliente.')
+        : 'Compatível com a faixa contratual praticada (20–30%).')));
+  }
+
+  // Oportunidade de indicação/avaliação
+  itens.push(obsCard('info', '⭐', 'Indicação e avaliação como ativo comercial',
+    'As colunas <b>Indicação Solicitada</b> e <b>Avaliação Solicitada</b> estão praticamente sem preenchimento. O momento do repasse é o pico de satisfação do cliente — é quando pedir avaliação pública e indicação converte melhor. Registrar isso na planilha permitiria medir quantos novos casos nascem da própria carteira.'));
+
+  document.getElementById('listaAtencao').innerHTML = itens.join('');
+}
+
+function render(regs) {
+  REGISTROS = regs;
+  renderFiltroAno();
+  const f = filtrados();
+  const a = agregar(f);
+  renderKPIs(f, a);
+  renderRateio(a);
+  renderTipoHonorarios(f);
+  renderEvolucao(f);
+  renderComparativoAnos();
+  renderPendencias(f, a);
+  renderClientes(f);
+  renderAtencao(f, a);
+}
+
+document.getElementById('filtrosPend').addEventListener('click', ev => {
+  const b = ev.target.closest('.chip');
+  if (!b) return;
+  FILTRO_PEND.f = b.dataset.f;
+  document.querySelectorAll('#filtrosPend .chip').forEach(x => x.classList.toggle('ativo', x === b));
+  renderTabelaPend(filtrados());
+});
+
+
+/* =========================================================================
+   CICLO / AUTENTICAÇÃO
+   ========================================================================= */
+let DADOS = null;
+
+async function carregarDados() {
+  const erroEl = document.getElementById('erroBox');
+  try {
+    DADOS = await buscarTudo();
+    document.getElementById('linkPlanilha').href =
+      'https://docs.google.com/spreadsheets/d/' + CONFIG.SHEET_ID + '/edit';
+    document.getElementById('carregando').classList.add('oculto');
+    document.getElementById('conteudo').classList.remove('oculto');
+    erroEl.classList.add('oculto');
+    document.getElementById('atualizadoEm').textContent =
+      'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    render(DADOS);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('carregando').classList.add('oculto');
+    erroEl.classList.remove('oculto');
+    erroEl.innerHTML = '<b>Não foi possível carregar a planilha.</b><br>' + e.message +
+      '<br>Verifique se a planilha continua compartilhada como <b>"qualquer pessoa com o link pode ver"</b>.' +
+      ' Nova tentativa automática em ' + CONFIG.AUTO_REFRESH_MIN + ' min.';
+  }
+}
+
+document.getElementById('btnAtualizar').addEventListener('click', carregarDados);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && DADOS) carregarDados(); });
+setInterval(() => { if (DADOS) carregarDados(); }, CONFIG.AUTO_REFRESH_MIN * 60 * 1000);
+
+const CHAVE_SESSAO = 'dashboard-alvaras-acordos_sessao';
+
+function entrarNoPainel(segredo, guardar) {
+  CONFIG.SHEET_ID = segredo.SHEET_ID;
+  CONFIG.GOOGLE_API_KEY = segredo.GOOGLE_API_KEY;
+  if (guardar) { try { sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(segredo)); } catch (e) {} }
+  document.getElementById('loginOverlay').classList.add('oculto');
+  document.getElementById('cabecalho').classList.remove('oculto');
+  document.getElementById('carregando').classList.remove('oculto');
+  carregarDados();
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('btnEntrar');
+  const erroEl = document.getElementById('loginErro');
+  erroEl.classList.add('oculto');
+  btn.disabled = true; btn.textContent = 'Verificando…';
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const segredo = await abrirCofre(
+      document.getElementById('campoUsuario').value,
+      document.getElementById('campoSenha').value);
+    btn.textContent = 'Entrando…';
+    entrarNoPainel(segredo, true);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Entrar';
+    erroEl.classList.remove('oculto');
+    erroEl.textContent = 'Login ou senha sem acesso a este painel.';
+    document.getElementById('campoSenha').value = '';
+    document.getElementById('campoSenha').focus();
+  }
+});
+
+document.getElementById('btnSair').addEventListener('click', () => {
+  try { sessionStorage.removeItem(CHAVE_SESSAO); } catch (e) {}
+  location.reload();
+});
+
+(async function iniciar() {
+  let salvo = null;
+  try { salvo = sessionStorage.getItem(CHAVE_SESSAO); } catch (e) {}
+  if (salvo) { try { entrarNoPainel(JSON.parse(salvo), false); return; } catch (e) {} }
+  let cred = null;
+  try { cred = JSON.parse(sessionStorage.getItem('bm_portal_cred') || 'null'); } catch (e) {}
+  if (cred && cred.u != null && cred.s != null) {
+    try { entrarNoPainel(await abrirCofre(cred.u, cred.s), true); return; } catch (e) {}
+  }
+  document.getElementById('campoUsuario').focus();
+})();
+</script>
+</body>
+</html>
