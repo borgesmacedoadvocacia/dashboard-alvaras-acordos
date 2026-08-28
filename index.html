@@ -377,6 +377,43 @@
     .modal-campos { grid-template-columns: 1fr; }
   }
 
+  /* ===== CARTÃO KPI CLICÁVEL ===== */
+  .kpi-clicavel { cursor: pointer; transition: background .14s, border-color .14s, transform .14s; }
+  .kpi-clicavel:hover {
+    background: var(--bg3); border-color: rgba(59,130,246,.4); transform: translateY(-2px);
+  }
+  .kpi-clicavel::before {
+    content: '\21F2'; position: absolute; right: .6rem; bottom: .5rem;
+    font-size: .8rem; color: var(--texto-muted); opacity: 0; transition: opacity .14s;
+  }
+  .kpi-clicavel:hover::before { opacity: .85; }
+
+  /* ===== TABELA DENTRO DO MODAL ===== */
+  .modal-tabela-wrap { overflow-x: auto; border: 1px solid var(--borda); border-radius: 10px; }
+  .modal-tabela { width: 100%; border-collapse: collapse; font-size: .81rem; min-width: 420px; }
+  .modal-tabela thead th {
+    position: sticky; top: 0; background: var(--bg3);
+    text-align: left; padding: .55rem .7rem; font-size: .64rem;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--texto-muted);
+    font-weight: 700; white-space: nowrap; border-bottom: 1px solid var(--borda);
+  }
+  .modal-tabela thead th.dir, .modal-tabela td.dir { text-align: right; }
+  .modal-tabela tbody td {
+    padding: .5rem .7rem; border-bottom: 1px solid rgba(30,45,74,.5);
+    vertical-align: top; line-height: 1.45;
+  }
+  .modal-tabela tbody tr:last-child td { border-bottom: none; }
+  .modal-tabela tbody tr:hover { background: rgba(255,255,255,.03); }
+  .modal-lista-nota { font-size: .74rem; color: var(--texto-muted); margin-top: .55rem; }
+  .modal-lista-total {
+    margin-top: .8rem; padding: .7rem .9rem; border-radius: 9px;
+    background: var(--bg3); border: 1px solid var(--borda);
+    font-size: .85rem; font-weight: 600;
+  }
+  .modal-lista-total b { color: var(--azul-claro); }
+  .resumo-item.item-clicavel { cursor: pointer; transition: background .14s, border-color .14s; }
+  .resumo-item.item-clicavel:hover { background: var(--bg4); border-color: rgba(59,130,246,.4); }
+
   .filtro-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
                   color: var(--texto-muted); font-weight: 700; white-space: nowrap; }
   select.campo {
@@ -893,6 +930,79 @@ function ligarBusca(id, aoDigitar) {
   limpar.addEventListener('click', () => { el.value = ''; el.focus(); disparar(); });
 }
 
+/* =========================================================================
+   LISTA DENTRO DO MODAL
+   Para quando o clique num cartão precisa mostrar "quais registros estão
+   por trás deste número".
+   ========================================================================= */
+/**
+ * abrirLista({ titulo, sub, colunas:[{r,chave,alinha,formata}], linhas:[obj],
+ *              vazio, rodape, notas:[{tipo,html}], limite })
+ */
+function abrirLista(cfg) {
+  const cols = cfg.colunas || [];
+  const linhas = cfg.linhas || [];
+  const limite = cfg.limite || 300;
+  const vis = linhas.slice(0, limite);
+
+  let html = '';
+  if (cfg.resumo && cfg.resumo.length) {
+    html += '<div class="modal-campos" style="margin-bottom:1rem">' +
+      cfg.resumo.map(c => '<div class="modal-campo">' +
+        '<div class="modal-rotulo">' + c.r + '</div>' +
+        '<div class="modal-valor ' + (c.classe || '') + '">' + c.v + '</div></div>').join('') +
+      '</div>';
+  }
+
+  if (!vis.length) {
+    html += '<div class="obs-vazio">' + (cfg.vazio || 'Nenhum registro para exibir.') + '</div>';
+  } else {
+    html += '<div class="modal-tabela-wrap"><table class="modal-tabela"><thead><tr>' +
+      cols.map(c => '<th' + (c.alinha === 'dir' ? ' class="dir"' : '') + '>' + c.r + '</th>').join('') +
+      '</tr></thead><tbody>' +
+      vis.map(l => '<tr>' + cols.map(c => {
+        const bruto = l[c.chave];
+        const v = c.formata ? c.formata(bruto, l) : (bruto === null || bruto === undefined || bruto === '' ? '—' : esc(bruto));
+        return '<td' + (c.alinha === 'dir' ? ' class="dir"' : '') + '>' + v + '</td>';
+      }).join('') + '</tr>').join('') +
+      '</tbody></table></div>';
+    if (linhas.length > vis.length) {
+      html += '<div class="modal-lista-nota">Exibindo os ' + vis.length + ' primeiros de ' +
+        linhas.length + ' registros.</div>';
+    } else {
+      html += '<div class="modal-lista-nota">' + linhas.length + ' registro' +
+        (linhas.length === 1 ? '' : 's') + '.</div>';
+    }
+  }
+
+  if (cfg.rodape) html += '<div class="modal-lista-total">' + cfg.rodape + '</div>';
+  (cfg.notas || []).forEach(n => {
+    if (n && n.html) html += '<div class="modal-nota ' + (n.tipo || '') + '">' + n.html + '</div>';
+  });
+
+  const f = document.getElementById('modalFundo');
+  document.getElementById('modalTitulo').innerHTML = cfg.titulo || '';
+  document.getElementById('modalSub').innerHTML = cfg.sub || '';
+  document.getElementById('modalCorpo').innerHTML = html;
+  f.classList.remove('oculto');
+  requestAnimationFrame(() => f.classList.add('aberto'));
+}
+
+/** Marca um cartão KPI como clicável e liga ao detalhamento. */
+function kpiClicavel(indice, aoAbrir) {
+  const cartoes = document.querySelectorAll('#kpis .kpi');
+  const el = cartoes[indice];
+  if (!el) return;
+  el.classList.add('kpi-clicavel');
+  el.title = 'Clique para ver os registros';
+  el.addEventListener('click', aoAbrir);
+}
+
+/** Liga vários cartões de uma vez: mapa {indice: função}. */
+function ligarKPIs(mapa) {
+  Object.keys(mapa).forEach(i => kpiClicavel(Number(i), mapa[i]));
+}
+
 
 /* =========================================================================
    APLICAÇÃO
@@ -1174,6 +1284,8 @@ function renderKPIs(regs, a) {
       a.prazoMedioCliente === null ? 'azul' : a.prazoMedioCliente <= 5 ? 'verde' : a.prazoMedioCliente <= 15 ? 'amarelo' : 'vermelho',
       '<span>do crédito em conta até o repasse ao cliente</span>')
   ].join('');
+
+  ligarDetalheKPIs(regs, a);
 }
 
 function renderRateio(a) {
@@ -1593,6 +1705,7 @@ function desenhar() {
   renderPendencias(f, a);
   renderClientes(f);
   renderAtencao(f, a);
+  ligarRateioSemInformacao(f);
 }
 
 function render(regs) {
@@ -1612,6 +1725,116 @@ document.getElementById('filtrosPend').addEventListener('click', ev => {
 
 
 /* =========================================================================
+   DETALHE DOS CARTÕES
+   Cada cartão do Resumo Executivo abre a lista de alvarás por trás do número.
+   ========================================================================= */
+const COL_ALV = [
+  { r: 'Cliente / Processo', chave: 'cliente', formata: (v, l) => '<b>' + esc(v) + '</b>' +
+      (l.processo ? '<br><span style="color:var(--texto-muted);font-size:.72rem">' + esc(l.processo) + '</span>' : '') },
+  { r: 'Crédito', chave: 'dataCred', formata: v => v ? v.toLocaleDateString('pt-BR') : '<span style="color:var(--texto-muted)">sem data</span>' },
+  { r: 'Creditado', chave: 'creditado', alinha: 'dir', formata: v => '<b>' + moeda(v) + '</b>' },
+  { r: 'Honorários', chave: 'honorarios', alinha: 'dir', formata: v => moeda(v) },
+  { r: 'Cliente recebe', chave: 'devidoCliente', alinha: 'dir', formata: v => moeda(v) }
+];
+
+function listaAlv(titulo, linhas, campoSoma, rotuloSoma, nota, tipo) {
+  const chave = campoSoma || 'creditado';
+  const soma = linhas.reduce((s, x) => s + (x[chave] || 0), 0);
+  abrirLista({
+    titulo,
+    sub: linhas.length + ' alvará' + (linhas.length === 1 ? '' : 's') + ' · ' + moeda(soma),
+    colunas: COL_ALV,
+    linhas: [...linhas].sort((a, b) => (b[chave] || 0) - (a[chave] || 0)),
+    rodape: (rotuloSoma || 'Total') + ': <b>' + moeda(soma) + '</b>',
+    notas: nota ? [{ tipo: tipo || '', html: nota }] : []
+  });
+}
+
+function ligarDetalheKPIs(regs, a) {
+  const semRateio = regs.filter(r => r.creditado > 0 && (r.honorarios + r.parceiros + r.devidoCliente) === 0);
+  const pendBM = regs.filter(r => !quitado(r.repasseBM) && r.honorarios > 0);
+  const pendCli = regs.filter(r => !quitado(r.repasseCliente) && r.devidoCliente > 0);
+  const emAberto = [...new Set(pendBM.concat(pendCli))];
+  const comGlosa = regs.filter(r => r.solicitado > 0 && r.creditado > 0);
+  const comPrazo = regs.filter(r => r.dataCred && r.dataRepasseCliente);
+
+  ligarKPIs({
+    0: () => listaAlv('Valor Creditado', regs, 'creditado', 'Total creditado',
+      'Todos os alvarás e acordos creditados em conta no período selecionado.'),
+    1: () => listaAlv('Honorários do Escritório', regs.filter(r => r.honorarios > 0), 'honorarios',
+      'Total de honorários',
+      'Take rate do período: <b>' + pct1(a.takeRate) + '</b> sobre o valor creditado.'),
+    2: () => listaAlv('Repasse a Parceiros', regs.filter(r => r.parceiros > 0), 'parceiros', 'Total a parceiros'),
+    3: () => listaAlv('Devido ao Cliente', regs.filter(r => r.devidoCliente > 0), 'devidoCliente', 'Total devido'),
+    4: () => listaAlv('Ticket Médio', regs, 'creditado', 'Total creditado',
+      'Ticket médio de <b>' + moeda(a.ticket) + '</b> em ' + a.qtd + ' alvarás.'),
+    5: () => abrirLista({
+      titulo: 'Solicitado × Creditado',
+      sub: comGlosa.length + ' alvarás com os dois valores lançados',
+      colunas: [COL_ALV[0], COL_ALV[1],
+        { r: 'Solicitado', chave: 'solicitado', alinha: 'dir', formata: v => moeda(v) },
+        { r: 'Creditado', chave: 'creditado', alinha: 'dir', formata: v => '<b>' + moeda(v) + '</b>' },
+        { r: 'Diferença', chave: 'creditado', alinha: 'dir', formata: (v, l) => {
+            const d = l.creditado - l.solicitado;
+            return '<span class="' + (d >= 0 ? 'val-pos' : 'val-neg') + '">' +
+              (d >= 0 ? '+' : '') + moeda(d) + '</span>';
+          } }],
+      linhas: [...comGlosa].sort((x, y) => (x.creditado - x.solicitado) - (y.creditado - y.solicitado)),
+      rodape: (a.glosa > 0 ? 'Creditado <b>abaixo</b> do pedido em ' : 'Creditado <b>acima</b> do pedido em ') +
+              '<b>' + moeda(Math.abs(a.glosa)) + '</b>',
+      notas: [{ tipo: '', html: 'Só entram alvarás com <b>solicitado e creditado</b> preenchidos — os demais distorceriam a comparação.' }]
+    }),
+    6: () => abrirLista({
+      titulo: 'Repasses em Aberto',
+      sub: emAberto.length + ' alvará(s) com repasse aguardando pagamento',
+      colunas: [COL_ALV[0], COL_ALV[1], COL_ALV[3], COL_ALV[4],
+        { r: 'Pendência', chave: 'cliente', formata: (v, l) => {
+            const t = [];
+            if (!quitado(l.repasseBM) && l.honorarios > 0) t.push('<span class="tag-pct vermelho">BM</span>');
+            if (!quitado(l.repasseCliente) && l.devidoCliente > 0) t.push('<span class="tag-pct amarelo">Cliente</span>');
+            return t.join(' ') || '&mdash;';
+          } }],
+      linhas: emAberto.sort((x, y) => y.creditado - x.creditado),
+      vazio: 'Nenhum repasse em aberto — tudo liquidado.',
+      rodape: 'Ao escritório: <b>' + moeda(a.pendBMValor) + '</b> · ao cliente: <b>' + moeda(a.pendClienteValor) + '</b>'
+    }),
+    7: () => abrirLista({
+      titulo: 'Prazo de Repasse ao Cliente',
+      sub: comPrazo.length + ' alvarás com crédito e repasse datados',
+      colunas: [COL_ALV[0], COL_ALV[1],
+        { r: 'Repasse', chave: 'dataRepasseCliente', formata: v => v ? v.toLocaleDateString('pt-BR') : '—' },
+        { r: 'Dias', chave: 'dataCred', alinha: 'dir', formata: (v, l) => {
+            const d = diasEntre(l.dataCred, l.dataRepasseCliente);
+            return '<span class="tag-pct ' + (d > 15 ? 'vermelho' : d > 5 ? 'amarelo' : 'verde') + '">' + d + ' d</span>';
+          } },
+        COL_ALV[4]],
+      linhas: [...comPrazo].sort((x, y) =>
+        diasEntre(y.dataCred, y.dataRepasseCliente) - diasEntre(x.dataCred, x.dataRepasseCliente)),
+      rodape: 'Prazo médio: <b>' +
+        (a.prazoMedioCliente === null ? '—' : a.prazoMedioCliente.toFixed(1).replace('.', ',') + ' dias') + '</b>',
+      notas: [{ tipo: a.prazoMedioCliente > 10 ? 'alerta' : '',
+        html: 'Referência de mercado: liquidar em até <b>5 dias úteis</b> do crédito em conta.' }]
+    })
+  });
+
+}
+
+/* O cartão "sem rateio informado" fica na seção Para Onde Vai o Dinheiro, que
+   é redesenhada depois dos KPIs — por isso a ligação acontece no fim do ciclo. */
+function ligarRateioSemInformacao(regs) {
+  const semRateio = regs.filter(r => r.creditado > 0 && (r.honorarios + r.parceiros + r.devidoCliente) === 0);
+  const grid = document.getElementById('resumoRateio');
+  const ultimo = grid && grid.lastElementChild;
+  if (!semRateio.length || !ultimo) return;
+  ultimo.classList.add('item-clicavel');
+  ultimo.title = 'Clique para ver os alvarás sem rateio';
+  ultimo.addEventListener('click', () => listaAlv('Alvarás sem Rateio Informado', semRateio,
+    'creditado', 'Valor sem destino informado',
+    'Estes alvarás têm valor creditado mas <b>nenhum</b> valor de honorários, parceiro ou cliente preenchido. É o principal ponto de conciliação da planilha.', 'critico'));
+}
+
+
+/* =========================================================================
    CICLO / AUTENTICAÇÃO
    ========================================================================= */
 let DADOS = null;
@@ -1620,8 +1843,11 @@ async function carregarDados() {
   const erroEl = document.getElementById('erroBox');
   try {
     DADOS = await buscarTudo();
-    document.getElementById('linkPlanilha').href =
-      'https://docs.google.com/spreadsheets/d/' + CONFIG.SHEET_ID + '/edit';
+    const idLink = CONFIG.SHEET_ID ||
+      (CONFIG.SHEETS ? Object.values(CONFIG.SHEETS)[0] : null);
+    const linkEl = document.getElementById('linkPlanilha');
+    if (idLink) linkEl.href = 'https://docs.google.com/spreadsheets/d/' + idLink + '/edit';
+    else linkEl.style.display = 'none';
     document.getElementById('carregando').classList.add('oculto');
     document.getElementById('conteudo').classList.remove('oculto');
     erroEl.classList.add('oculto');
@@ -1645,8 +1871,9 @@ setInterval(() => { if (DADOS) carregarDados(); }, CONFIG.AUTO_REFRESH_MIN * 60 
 const CHAVE_SESSAO = 'dashboard-alvaras-acordos_sessao';
 
 function entrarNoPainel(segredo, guardar) {
-  CONFIG.SHEET_ID = segredo.SHEET_ID;
-  CONFIG.GOOGLE_API_KEY = segredo.GOOGLE_API_KEY;
+  // Copia tudo o que o cofre trouxer: um painel pode guardar uma planilha
+  // (SHEET_ID) ou várias (SHEETS), além da chave da API.
+  Object.assign(CONFIG, segredo);
   if (guardar) { try { sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(segredo)); } catch (e) {} }
   document.getElementById('loginOverlay').classList.add('oculto');
   document.getElementById('cabecalho').classList.remove('oculto');
